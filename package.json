@@ -10,8 +10,8 @@
     "dev": "vite --host",
     "build": "vite build",
     "app": "vite build && electron .",
-    "dist:win": "vite build && electron-builder --win --x64",
-    "dist:dir": "vite build && electron-builder --win --x64 --dir"
+    "dist:win": "vite build && electron-builder --win --x64 --publish never",
+    "dist:dir": "vite build && electron-builder --win --x64 --dir --publish never"
   },
   "dependencies": {
     "three": "0.170.0"

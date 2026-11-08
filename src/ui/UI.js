@@ -9,7 +9,7 @@ import { crestCanvas } from '../gfx/Textures.js';
  */
 // Íconos del control (DualSense) por acción
 const PAD_GLYPHS = { interact: '✕', crouch: '○', jump: '□', driveMode: '□', equip: '△', paramPrev: 'L1', paramNext: 'R1', paramDec: '←', paramInc: '→',
-  autofocus: 'R3', view: 'R3', sprint: 'L3', gear: 'Create', pause: 'Options', swapBattery: 'Panel', inventory: '↑', missions: '↓', map: '←', gallery: '→', zoomIn: '↑', zoomOut: '↓', walk: '—', forward: 'L↑', back: 'L↓', left: 'L←', right: 'L→' };
+  autofocus: 'R3', view: 'R3', sprint: 'L3', gear: 'Create', pause: 'Options', swapBattery: 'Panel', phone: 'Panel', inventory: '↑', missions: '↓', map: '←', gallery: '→', zoomIn: '↑', zoomOut: '↓', walk: '—', forward: 'L↑', back: 'L↓', left: 'L←', right: 'L→' };
 export class UI {
   constructor(game) {
     this.game = game; this.root = document.getElementById('ui-root'); this.screen = null; this.screenName = null;
@@ -26,7 +26,8 @@ export class UI {
       this.feedEl = h('div', { class: 'feed' }),
       this.gearEl = h('div', { class: 'gearbox' }),
       this.hintEl = h('div', { class: 'hint' }),
-      this.crossEl = h('div', { class: 'crosshair', style: { display: 'none' } }));
+      this.crossEl = h('div', { class: 'crosshair', style: { display: 'none' } }),
+      this.phoneEl = h('div', { class: 'phone-hud' }));
     this.vf = this.buildViewfinder();
     this.toastsEl = h('div', { class: 'toasts' });
     this.dlgEl = h('div');
@@ -82,6 +83,7 @@ export class UI {
     this.hud.classList.toggle('hidden', !showHud);
     this.vf.root.classList.toggle('show', g.photoMode.active && !this.screen);
     this.crossEl.style.display = showHud && g.follow.firstPerson ? 'block' : 'none';
+    if (g.phone && (this.phoneTick = (this.phoneTick || 0) + 1) % 15 === 0) { const n = g.phone.totalUnread; this.phoneEl.innerHTML = `<kbd>${this.key('phone')}</kbd>📱 Teléfono${n ? `<i>${n}</i>` : ''}`; this.phoneEl.classList.toggle('has', n > 0); }
     if (g.settings.data.showFps) this.fpsEl.textContent = `${g.fps.toFixed(0)} FPS · ${g.renderer.info.render.calls} dc`; else this.fpsEl.textContent = '';
     if (g.state !== 'play') return;
     // Reloj / marcador
@@ -97,7 +99,7 @@ export class UI {
           h('div', { class: 'score' }, `${m.score[0]} - ${m.score[1]}`), h('div', { class: 'team' }, m.teams[1].short), h('div', { class: 'sw', style: { background: m.teams[1].colors.primary } }),
           h('div', { class: 'min' }, ph || `${Math.floor(m.minute)}'`));
       }
-    } else if (m) { this.scoreEl.style.display = 'flex'; if (this.scoreKey !== 'warm') { this.scoreKey = 'warm'; clear(this.scoreEl).append(h('div', { class: 'team' }, `${m.teams[0].short} vs ${m.teams[1].short}`), h('div', { class: 'min' }, 'CALENTAMIENTO')); } }
+    } else if (m) { this.scoreEl.style.display = 'flex'; const wk = g.crowdLife?.pitchVisible === false ? 'pre' : 'warm'; if (this.scoreKey !== wk) { this.scoreKey = wk; clear(this.scoreEl).append(h('div', { class: 'team' }, `${m.teams[0].short} vs ${m.teams[1].short}`), h('div', { class: 'min' }, wk === 'pre' ? 'PREVIA' : 'CALENTAMIENTO')); } }
     else this.scoreEl.style.display = 'none';
     this.walletEl.innerHTML = `<b>${formatMoney(g.career.money)}</b> · Rep. <b>${Math.round(g.career.reputation)}</b>`;
     // Misiones activas

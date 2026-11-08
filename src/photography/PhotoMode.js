@@ -236,12 +236,12 @@ export class PhotoMode {
     const camInfo = { position: camPos, quaternion: camQuat, angVel: this.angVel.clone(), shakeAt: (tau) => ({ x: shake.x * tau, y: shake.y * tau }) };
     // Muestras temporales según desenfoque esperado
     const pxPerRad = H / THREE.MathUtils.degToRad(this.vfov);
-    const subs = match ? match.subjects() : [];
+    const subs = match && match.group.visible ? match.subjects() : [];
     let maxPx = (Math.hypot(this.angVel.x, this.angVel.y) + rate) * this.shutter * pxPerRad;
     for (const s of subs) { const d = camPos.distanceTo(s.pos); if (d > 1) maxPx = Math.max(maxPx, s.vel.length() * this.shutter / d * pxPerRad); }
     const burst = this.s.drive === 'burst' && this.bufferUsed > 2;
     const N = clamp(Math.ceil(maxPx / 1.6), 1, burst ? 6 : 14);
-    const dyn = match ? match.dynamicObjects() : [];
+    const dyn = match && match.group.visible ? match.dynamicObjects() : [];
     // Instantánea del estado para la evaluación (antes de mover objetos)
     const subjects = subs.map((s) => ({ ...s, pos: s.pos.clone(), vel: s.vel.clone(), yaw: s.ref.yaw ?? s.h?.root.rotation.y ?? 0, keypoints: s.h ? s.h.keyPoints([]) : [s.pos.clone()] }));
     const res = this.pipeline.capture(g.scene, optics, camInfo, dyn, g.stadium?.crowd, W, H, N);

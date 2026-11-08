@@ -16,7 +16,7 @@ import { TEAMS } from '../football/Teams.js';
 const ICONS = { camera: '📷', lens: '🔭', card: '💾', battery: '🔋', accessory: '🧰', backpack: '🎒', credential: '🪪' };
 
 export class Screens {
-  constructor(game) { this.game = game; this.timeChoice = {}; }
+  constructor(game) { this.game = game; this.timeChoice = {}; this.arriveChoice = {}; }
   get ui() { return this.game.ui; }
   // ================= MENÚ PRINCIPAL =================
   mainMenu() {
@@ -95,7 +95,7 @@ export class Screens {
           field('Duración de cada tiempo', sel('halfSeconds', [[150, 'Corto (2,5 min)'], [240, 'Normal (4 min)'], [360, 'Largo (6 min)'], [540, 'Extendido (9 min)']])),
           field('Cámara', sel('camera', Object.values(CAMERAS).map((c) => [c.id, c.name]))),
           field('Lente inicial (los demás van en la mochila)', sel('lens', lenses)),
-          field('Empezar en', sel('start', [['warmup', 'Calentamiento y salida de los equipos'], ['kickoff', 'Directo al saque inicial']]))),
+          field('Empezar en', sel('start', [['early', 'Llegar 2,5 h antes (estadio vacío que se va llenando)'], ['warmup', 'Calentamiento y salida de los equipos'], ['kickoff', 'Directo al saque inicial']]))),
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', gap: '10px', flexWrap: 'wrap' } },
           h('div', { class: 'teams', style: { fontSize: '20px' } }, this.ui.crest(TEAMS[cfg.home], 40), TEAMS[cfg.home].name, h('span', { class: 'muted' }, ' vs '), this.ui.crest(TEAMS[cfg.away], 40), TEAMS[cfg.away].name),
           h('div', { style: { display: 'flex', gap: '8px' } }, h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver'),
@@ -319,7 +319,9 @@ export class Screens {
             (() => { const sel = h('select', { title: 'Horario', onchange: (ev) => { this.timeChoice[e.id] = ev.target.value; } },
               h('option', { value: '' }, `Horario: ${TIME_PRESETS[e.time].label}`), ...Object.entries(TIME_PRESETS).filter(([k]) => k !== e.time).map(([k, v]) => h('option', { value: k, selected: this.timeChoice[e.id] === k ? true : null }, v.label)));
               return sel; })(),
-            h('button', { class: 'btn ' + (!e.locked ? 'primary' : ''), disabled: e.locked ? true : null, onclick: () => { const t = this.timeChoice[e.id]; g.startEvent(t ? { ...e, time: t, kickoff: TIME_PRESETS[t].kickoff } : e); } }, e.done ? 'Repetir' : 'Cubrir'))));
+            h('select', { title: 'Hora de llegada', onchange: (ev) => { this.arriveChoice[e.id] = +ev.target.value; } },
+              ...[[0, 'Llegada: normal (30 min antes)'], [60, 'Llegar 1 h antes'], [120, 'Llegar 2 h antes'], [180, 'Llegar 3 h antes']].map(([v, l]) => h('option', { value: v, selected: (this.arriveChoice[e.id] || 0) === v ? true : null }, l))),
+            h('button', { class: 'btn ' + (!e.locked ? 'primary' : ''), disabled: e.locked ? true : null, onclick: () => { const t = this.timeChoice[e.id], a = this.arriveChoice[e.id]; const ev2 = t ? { ...e, time: t, kickoff: TIME_PRESETS[t].kickoff } : { ...e }; if (a) ev2.arrive = a; g.startEvent(ev2); } }, e.done ? 'Repetir' : 'Cubrir'))));
       }
       // Panel derecho: perfil, contratos, tienda
       right.append(h('div', { class: 'card' }, h('div', { class: 'h3' }, g.playerName), h('div', {}, c.title), h('div', { class: 'repbar', style: { margin: '8px 0' } }, h('i', { style: { width: c.reputation + '%' } })),

@@ -4,6 +4,17 @@
 
 Esta es la versión de escritorio para **Windows 10/11 (64 bits)**. Tiene todo lo de la versión de Mac: modo carrera, modo arcade, La Cueva, el Morera Soto, el Fello Meza, ciclo día/noche, primera persona, control de PS5, ceremonia previa con sorteo de moneda, caídas tipo muñeco de trapo y tarjetas del árbitro.
 
+## Novedades
+
+- **Llegar horas antes:** elegís llegar 1, 2 o 3 h antes. El estadio se va llenando y la luz cambia con la hora.
+- **Teléfono** (`H` / panel táctil):
+  - Chats con tu familia y tus amigos.
+  - Red social *Lente* para publicar tus fotos.
+  - Entradas de cortesía para regalar: tu familia aparece en la gradería con un rótulo.
+  - Reloj para esperar el partido.
+- **Público más vivo:** te saluda, te pide fotos, posa cuando le apuntás con la cámara y la barra canta.
+- **Puerta de seguridad:** puerta de vidrio transparente y corrediza.
+
 ## Descargar el juego (sin programar nada)
 
 1. En GitHub, abrí la pestaña **Actions** → **Compilar para Windows** → la ejecución más reciente.

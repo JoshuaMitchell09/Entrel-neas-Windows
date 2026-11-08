@@ -31,6 +31,8 @@ import { PostFX } from '../gfx/PostFX.js';
 import { Scenery } from '../world/Scenery.js';
 import { ViewModel } from '../player/ViewModel.js';
 import { Story } from './Story.js';
+import { Phone } from '../phone/Phone.js';
+import { CrowdLife } from '../world/CrowdLife.js';
 import { clamp } from '../core/MathUtil.js';
 
 export class Game {
@@ -53,6 +55,7 @@ export class Game {
     this.interaction = new InteractionSystem(this); this.photoMode = new PhotoMode(this);
     this.player = new PlayerController(this); this.follow = new FollowCamera(this, this.camera);
     this.post = new PostFX(this); this.scene.add(this.camera); this.viewModel = new ViewModel(this);
+    this.phone = new Phone(this); this.crowdLife = new CrowdLife(this);
     this.state = 'boot'; this.clock = 15 * 60; this.time = 0; this.fps = 60; this.inEvent = false; this.cinematic = false;
     this.playerName = 'Fotógrafo'; this.profileId = null; this.menuT = 0;
     this.resize(); window.addEventListener('resize', () => this.resize());
@@ -136,7 +139,7 @@ export class Game {
     this.arcade = false;
     this.playerName = name; this.profileId = 'p_' + Date.now();
     await this.photos.setProfile(this.profileId);
-    this.career.reset(); this.inventory.reset(); this.missions.active = []; this.missions.done = []; this.story.introDone = false;
+    this.career.reset(); this.inventory.reset(); this.missions.active = []; this.missions.done = []; this.story.introDone = false; this.phone.reset();
     this.saves.save('auto');
     await this.startEvent(EVENTS[0]);
   }
@@ -144,7 +147,7 @@ export class Game {
     this.arcade = false;
     this.playerName = d.playerName; this.profileId = d.profileId;
     await this.photos.setProfile(this.profileId);
-    this.career.reset(); this.career.load(d.career); this.inventory.reset(); this.inventory.load(d.inventory); this.missions.load(d.missions); this.story.load(d.story);
+    this.career.reset(); this.career.load(d.career); this.inventory.reset(); this.inventory.load(d.inventory); this.missions.load(d.missions); this.story.load(d.story); this.phone.load(d.phone);
   }
   async continueGame() { const l = this.saves.latest(); if (l) await this.loadSlot(l.slot); }
   async loadSlot(slot) {
@@ -158,7 +161,7 @@ export class Game {
     this.arcadeCfg = cfg; this.arcade = true;
     this.ui.closeScreen(true);
     this.playerName = cfg.name || 'Fotógrafo';
-    await this.photos.setProfile('arcade');
+    await this.photos.setProfile('arcade'); this.phone.reset();
     // Equipo completo disponible y listo
     const inv = this.inventory; inv.reset();
     for (const id of Object.keys(ALL_ITEMS)) if (ALL_ITEMS[id].type !== 'credential') inv.owned[id] = Math.max(1, inv.owned[id] || 0);
@@ -183,7 +186,9 @@ export class Game {
     this.player.place(57.2, -12, -Math.PI / 2); this.player.crouch = false;
     this.player.setCameraEquipped(true); this.player.avatar.setLensLength(inv.lens.max);
     this.follow.yaw = -Math.PI / 2; this.follow.pitch = 0.15; this.follow.snap(this.player);
-    this.clock = cfg.start === 'kickoff' ? T.kickoff : T.kickoff - 4;
+    this.clock = cfg.start === 'kickoff' ? T.kickoff : cfg.start === 'early' ? T.kickoff - 150 : T.kickoff - 4;
+    if (cfg.start === 'early') { this.env.dynamic = true; this.env.setHour(this.clock / 60, true); }
+    this.crowdLife.warmAnnounced = this.clock >= T.kickoff - 45;
     if (cfg.start === 'kickoff') this.story.kickoffNow();
     this.ui.setObjective(`Arcade: ${this.teamName(cfg.home)} vs ${this.teamName(cfg.away)} · Conseguí las mejores fotos del partido.`);
     this.state = 'play'; this.input.wantLock = true;
@@ -252,6 +257,7 @@ export class Game {
   handleInput() {
     const inp = this.input, pm = this.photoMode, p = this.player;
     if (inp.keyPressed('Escape') || inp.padPressed('pause')) this.onEscape();
+    if (this.ui.screenName === 'phone' && (inp.keyPressed(inp.bind('phone')) || inp.padPressed('phone'))) { inp.consumePad(); this.resume(); return; }
     if (this.ui.screen || this.ui.dialogueActive || this.cinematic) return;
     if (!pm.active) {
       if (inp.wasPressed('inventory')) return this.screens.pause('inventario');
@@ -259,6 +265,7 @@ export class Game {
       if (inp.wasPressed('map')) return this.screens.pause('mapa');
       if (inp.wasPressed('missions')) return this.screens.pause('misiones');
       if (inp.wasPressed('gear')) return this.screens.pause('inventario');
+      if (inp.wasPressed('phone')) { inp.consumePad(); return this.phone.open(); }
       if (inp.wasPressed('interact')) this.interaction.interact();
       if (inp.wasPressed('view')) this.toggleView();
     }
@@ -275,7 +282,7 @@ export class Game {
       if (pm.active) pm.exit();
       else { if (!p.cameraEquipped) p.setCameraEquipped(true); pm.enter(); }
     }
-    if (inp.wasPressed('swapBattery')) {
+    if (inp.keyPressed(inp.bind('swapBattery')) || (pm.active && inp.padPressed('swapBattery'))) {
       if (this.inventory.swapBattery()) { this.ui.toast(`Batería cambiada (${this.inventory.batteryPct}%).`, 'good'); this.audio.ui('click'); }
       else this.ui.toast('No hay baterías de repuesto con carga en la mochila.', 'warn');
     }
@@ -313,7 +320,7 @@ export class Game {
       const a = this.menuT * 0.05;
       this.camera.position.set(Math.cos(a) * 75, 22 + Math.sin(this.menuT * 0.1) * 4, Math.sin(a) * 52);
       this.camera.lookAt(0, 2, 0); this.camera.fov = 50; this.camera.updateProjectionMatrix();
-      if (st) { st.update(dt, this.time, m?.excite || 0.2); st.crowd.uniforms.uExcite.value = 0.25; }
+      if (st) { st.update(dt, this.time, m?.excite || 0.2); const cu = st.crowd.uniforms; cu.uExcite.value = 0.25; cu.uFill.value = 1; cu.uNear.value = 0; cu.uAimAmt.value = 0; cu.uChant.value = 0.4; }
       this.env.update(dt, new THREE.Vector3(0, 0, 0), this.time);
       this.audio.update(dt, { inStadiumBowl: true, interior: false, distToStadium: 0, excite: 0.25, weather: this.env.weather, time: this.env.time, crowd: !!st, city: false, menu: true });
       this.player.root.visible = false;
@@ -322,7 +329,7 @@ export class Game {
     if (this.state !== 'play') return;
     this.handleInput();
     const paused = !!this.ui.screen;
-    if (paused) { this.ui.update(dt); return; }
+    if (paused) { this.phone.update(dt); this.ui.update(dt); return; }
     const freeMove = !this.ui.dialogueActive && !this.cinematic;
     if (!this.photoMode.active) {
       this.follow.update(dt, this.input, p, freeMove && (this.input.locked || this.input.pad));
@@ -341,9 +348,10 @@ export class Game {
     const outside = st && p.pos.z > st.gateZ + 0.5, deepInside = st && p.pos.z < st.gateZ - 3;
     if (m) {
       m.update(dt);
-      m.group.visible = !outside;
+      m.group.visible = !outside && this.crowdLife.pitchVisible;
     }
     if (st) {
+      st.gate.watch = p.pos;
       st.update(dt, this.time, m?.excite || 0.15);
       const cu = st.crowd.uniforms;
       cu.uExcite.value = m ? m.excite * 0.85 : 0.1;
@@ -361,7 +369,7 @@ export class Game {
       n.root.visible = vis;
       if (vis && n.pos.distanceTo(p.pos) < 140) n.update(dt, p.pos);
     }
-    this.story.update(dt); this.rules.update(dt);
+    this.story.update(dt); this.rules.update(dt); this.crowdLife.update(dt); this.phone.update(dt);
     this.env.update(dt, st && Math.abs(p.pos.x) < 75 && Math.abs(p.pos.z) < 48 ? new THREE.Vector3(0, 0, 0) : this.camera.position, this.time, this.clock / 60);
     // Audio
     const interior = st && p.pos.z > APRON_Z + 0.5 && p.pos.z < st.gateZ && Math.abs(p.pos.x) < 25;

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import * as TX from '../gfx/Textures.js';
 import { Crowd } from './Crowd.js';
-import { Door } from '../interaction/Interaction.js';
+import { Door, GlassSlidingDoor } from '../interaction/Interaction.js';
 import { stdMat } from '../characters/Humanoid.js';
 import { mergeStatic } from '../gfx/Merge.js';
 
@@ -186,7 +186,15 @@ export class Stadium {
       const a = new THREE.BoxGeometry(len / 2 + cutout.x0, fy, 0.3); a.translate((-len / 2 + cutout.x0) / 2, fy / 2, -0.15); geos.push(a);
       const b = new THREE.BoxGeometry(len / 2 - cutout.x1, fy, 0.3); b.translate((cutout.x1 + len / 2) / 2, fy / 2, -0.15); geos.push(b);
     }
-    const bw = new THREE.BoxGeometry(len, topY + 1.6, 0.4); bw.translate(0, (topY + 1.6) / 2, D + 0.2); geos.push(bw);
+    const BH = topY + 1.6;
+    if (!cutout) { const bw = new THREE.BoxGeometry(len, BH, 0.4); bw.translate(0, BH / 2, D + 0.2); geos.push(bw); }
+    else {
+      // Pared trasera con el vano del acceso de prensa (x −2.1..2.1, 3.25 m de alto): la puerta de vidrio da directo al pasillo
+      const hx = 2.1, hh = 3.25;
+      const l = new THREE.BoxGeometry(len / 2 - hx, BH, 0.4); l.translate((-len / 2 - hx) / 2, BH / 2, D + 0.2); geos.push(l);
+      const r = new THREE.BoxGeometry(len / 2 - hx, BH, 0.4); r.translate((len / 2 + hx) / 2, BH / 2, D + 0.2); geos.push(r);
+      const t = new THREE.BoxGeometry(2 * hx, BH - hh, 0.4); t.translate(0, hh + (BH - hh) / 2, D + 0.2); geos.push(t);
+    }
     for (const e of [-1, 1]) {
       const shp = new THREE.Shape(); shp.moveTo(0, 0); shp.lineTo(0, fy); shp.lineTo(D, topY + 1.2); shp.lineTo(D, 0); shp.lineTo(0, 0);
       const sg = new THREE.ExtrudeGeometry(shp, { depth: 0.4, bevelEnabled: false }); sg.rotateY(-Math.PI / 2); sg.translate(e * len / 2 + (e > 0 ? 0.4 : 0), 0, 0);
@@ -259,7 +267,9 @@ export class Stadium {
       if (awayEnd) col = r < 0.75 ? (r < 0.5 ? A.primary : A.secondary) : neutral[Math.floor(Math.random() * neutral.length)];
       else col = r < 0.62 ? (r < 0.45 ? H.primary : H.secondary) : neutral[Math.floor(Math.random() * neutral.length)];
       const barra = s.x > APRON_X && Math.abs(s.z) < 18;
-      this.crowd.addPerson(s.x, s.y, s.z, s.rot, col, barra ? Math.random() * 0.15 : 0.15 + Math.random() * 0.85);
+      // La barra llega temprano; las filas de abajo se llenan antes que las de arriba
+      const arrival = barra ? Math.random() * 0.55 : Math.min(1, Math.random() * 0.85 + Math.min(0.15, (s.row || 0) * 0.008));
+      this.crowd.addPerson(s.x, s.y, s.z, s.rot, col, barra ? Math.random() * 0.15 : 0.15 + Math.random() * 0.85, { barra: barra && this.cfg.hasBarra !== false, cap: awayEnd ? A.primary : H.primary, row: s.row, arrival });
     }
     this.crowd.finalize(); this.group.add(this.crowd.mesh);
     this.crowdCount = this.crowd.count;
@@ -541,8 +551,9 @@ export class Stadium {
     const pr = new THREE.Mesh(new THREE.PlaneGeometry(4, 0.7), new THREE.MeshBasicMaterial({ map: TX.signTexture('ACCESO DE PRENSA', '#0b3d91', '#ffffff', 512, 90, 'bold 52px Arial') }));
     pr.position.set(0, 3.5, gz + 0.32); this.group.add(pr);
     // Puerta corrediza del control de seguridad
-    this.gate = new Door({ scene: this.group, collision: this.col, x: 0, z: gz, width: 4, height: 3, sliding: true, openDir: 1, hingeSide: -1,
-      mat: new THREE.MeshStandardMaterial({ color: 0x4a5560, metalness: 0.6, roughness: 0.4 }), frameMat: null, label: 'ACCESO' });
+    // Puerta automática de vidrio (transparente y corrediza) sobre la cara interior de la fachada
+    this.gate = new GlassSlidingDoor({ scene: this.group, collision: this.col, x: 0, z: gz - 0.7, width: 4, height: 3, label: 'ACCESO',
+      signTexture: TX.signTexture('ACCESO DE PRENSA · SOLO ACREDITADOS', '#00000000', '#0b3d91', 1024, 160, 'bold 64px Arial') });
     this.doors.push(this.gate);
     // Arco detector de metales y escáner de equipaje
     const det = new THREE.Group(); det.position.set(0, 0, gz + 2.4); this.group.add(det);

@@ -69,6 +69,8 @@ export class Career {
       else { rep -= 3; lines.push([`Encargo no cumplido: ${a.title}`, -3]); }
     }
     if (st.arrivedOnTime === false) { rep -= 3; lines.push(['Llegaste tarde al inicio del partido', -3]); }
+    else if (st.early) { rep += 1; lines.push([`Llegaste temprano (${Math.round(st.early / 60 * 10) / 10} h antes del saque)`, 1]); }
+    const fol = this.game.phone?.social.followers; if (fol && st.followersAtStart !== undefined && fol > st.followersAtStart) lines.push([`Lente: +${fol - st.followersAtStart} seguidores nuevos`, 0]);
     if (st.infractions) { const v = st.expelled ? -8 : -2 * st.infractions; rep += v; lines.push([st.expelled ? 'Te retiraron de la zona de prensa' : `${st.infractions} infracción(es) de acceso`, v]); }
     if (abandoned) { rep -= 10; lines.push(['Abandonaste el evento', -10]); }
     rep = Math.round(rep);

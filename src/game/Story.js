@@ -110,7 +110,14 @@ export class Story {
     g.missions.clearEventMissions();
     g.inventory.credential = null; g.missions.add('m_acred');
     this.setObjective();
-    g.clock = ev.kickoff - (intro ? 34 : 26);
+    // Hora de llegada: normal (~media hora antes) u horas antes del saque
+    const arrive = ev.arrive || (intro ? 34 : 26), early = arrive > 45;
+    g.clock = ev.kickoff - arrive;
+    if (g.career.eventState) { g.career.eventState.early = early ? arrive : 0; g.career.eventState.followersAtStart = g.phone.social.followers; }
+    if (early) { g.env.dynamic = true; g.env.setHour(g.clock / 60, true); }
+    const guests = g.phone.onEventStart(ev, { early });
+    g.crowdLife.setup(ev, guests);
+    if (early) setTimeout(() => g.ui.hint('Llegaste temprano', `Faltan ${Math.floor(arrive / 60)} h ${arrive % 60 ? (arrive % 60) + ' min' : ''} para el saque. El estadio se va llenando poco a poco y los equipos salen a calentar 45 min antes.<br><br>Usá el <b>teléfono</b> (<kbd>${g.ui.key('phone')}</kbd>) para escribirle a tu familia, publicar fotos o <b>esperar</b> con el reloj.`, 12000), 1200);
     if (intro) setTimeout(() => g.ui.hint('Primera cobertura', `Hoy es tu primera cobertura. Recogé tu acreditación y llegá al estadio.<br><br><kbd>W A S D</kbd>moverse · <kbd>Shift</kbd>correr · <kbd>${g.ui.key('interact')}</kbd>interactuar · <kbd>M</kbd>mapa · <kbd>Esc</kbd>pausa`, 14000), 600);
   }
   setObjective() {
