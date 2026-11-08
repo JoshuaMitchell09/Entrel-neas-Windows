@@ -12,6 +12,7 @@ import { formatMoney, formatClock } from '../core/MathUtil.js';
 import { LABELS } from '../photography/PhotoEvaluator.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { TEAMS } from '../football/Teams.js';
+import { openCustomizer } from './Customizer.js';
 
 const ICONS = { camera: '📷', lens: '🔭', card: '💾', battery: '🔋', accessory: '🧰', backpack: '🎒', credential: '🪪' };
 
@@ -41,7 +42,7 @@ export class Screens {
     const el = h('div', { class: 'screen' }, h('div', { class: 'panel confirm', style: { width: '520px', textAlign: 'left' } },
       h('div', { class: 'h2' }, 'Nueva carrera'), h('div', { class: 'muted', style: { marginBottom: '14px' } }, 'Tu nombre aparecerá en la acreditación y en los créditos de tus fotos.'),
       name, h('div', { class: 'acts', style: { justifyContent: 'flex-end' } }, h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver'),
-        h('button', { class: 'btn primary', onclick: () => g.newGame(name.value.trim() || 'Fotógrafo') }, 'Comenzar'))));
+        h('button', { class: 'btn primary', onclick: () => { const nm = name.value.trim() || 'Fotógrafo'; openCustomizer(g, { title: `${nm}: tu fotógrafo`, confirm: 'Comenzar carrera →', onBack: () => this.newGameDialog(), onDone: (look) => g.newGame(nm, look) }); } }, 'Siguiente: apariencia →'))));
     this.ui.openScreen('newgame', el); setTimeout(() => name.focus(), 50);
   }
   loadMenu(fromPause = false) {
@@ -99,6 +100,7 @@ export class Screens {
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', gap: '10px', flexWrap: 'wrap' } },
           h('div', { class: 'teams', style: { fontSize: '20px' } }, this.ui.crest(TEAMS[cfg.home], 40), TEAMS[cfg.home].name, h('span', { class: 'muted' }, ' vs '), this.ui.crest(TEAMS[cfg.away], 40), TEAMS[cfg.away].name),
           h('div', { style: { display: 'flex', gap: '8px' } }, h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver'),
+            h('button', { class: 'btn', onclick: () => { try { localStorage.setItem('entrelineas.arcade', JSON.stringify(cfg)); } catch (e) { /* */ } openCustomizer(g, { title: 'Tu fotógrafo (arcade)', confirm: 'Guardar', onBack: () => this.arcadeSetup(), onDone: (look) => { g.player.applyLook(look); this.arcadeSetup(); } }); } }, '🎨 Apariencia'),
             h('button', { class: 'btn primary', style: { fontSize: '17px', padding: '12px 26px' }, onclick: () => { try { localStorage.setItem('entrelineas.arcade', JSON.stringify(cfg)); } catch (e) { /* */ } g.startArcade({ ...cfg }); } }, '¡Al estadio! →'))));
     };
     render();
@@ -236,6 +238,7 @@ export class Screens {
     const next = TITLES.find(([r]) => r > c.reputation);
     body.append(h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' } },
       h('div', { class: 'card' }, h('div', { class: 'h2' }, g.playerName), h('div', { class: 'muted' }, `${c.title} · ${CONTRACTS.find((x) => x.id === c.contract).name}`),
+        h('button', { class: 'btn small primary', style: { marginTop: '10px' }, onclick: () => openCustomizer(g, { title: 'Personalizar apariencia', confirm: 'Guardar apariencia', onBack: () => this.pause('perfil'), onDone: (look) => { g.player.applyLook(look); g.saves.save('auto'); g.ui.toast('Apariencia actualizada', 'good'); this.pause('perfil'); } }) }, '🎨 Personalizar apariencia'),
         h('div', { style: { margin: '14px 0 4px', display: 'flex', justifyContent: 'space-between' } }, h('span', {}, 'Reputación'), h('b', {}, `${Math.round(c.reputation)} / 100`)),
         h('div', { class: 'repbar' }, h('i', { style: { width: c.reputation + '%' } })), next ? h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '4px' } }, `Siguiente título: ${next[1]} (${next[0]})`) : null,
         ...[['Dinero', formatMoney(c.money)], ['Eventos cubiertos', st.events], ['Fotos tomadas', g.photos.records.length], ['Fotos entregadas', st.delivered], ['Mejor puntuación', Math.round(st.best)], ['Posibles portadas', st.covers], ['Ingresos totales', formatMoney(st.earned)], ['Infracciones', st.infractions]].map(([k, v]) => h('div', { class: 'stat' }, h('span', {}, k), h('b', {}, v)))),

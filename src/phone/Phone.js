@@ -1,6 +1,7 @@
 import { h, clear } from '../ui/dom.js';
 import { formatClock, pick, rand } from '../core/MathUtil.js';
 import { topicsFor } from './Conversations.js';
+import { genderize } from '../player/Look.js';
 
 /*
  * Teléfono del fotógrafo: mensajería con familia y amigos, la red social «Lente»
@@ -80,6 +81,8 @@ export class Phone {
   // ---------- Mensajería ----------
   push(id, msg) { (this.chats[id] ||= []).push(msg); if (this.chats[id].length > 60) this.chats[id].splice(0, this.chats[id].length - 60); }
   receive(id, text, o = {}) {
+    text = genderize(text, this.game.female);
+    if (o.options) o.options = o.options.map((x) => ({ ...x, label: genderize(x.label, this.game.female) }));
     this.push(id, { from: 'them', text, at: this.stamp(), ticket: o.ticket || null });
     if (o.options) this.options[id] = o.options;
     const open = this.isOpen() && this.view === 'chat' && this.sel === id;
@@ -89,7 +92,7 @@ export class Phone {
   }
   // Responder: el contacto «escribe» y contesta después de unos segundos
   send(id, opt) {
-    this.push(id, { from: 'me', text: opt.label, at: this.stamp() });
+    this.push(id, { from: 'me', text: genderize(opt.label, this.game.female), at: this.stamp() });
     delete this.options[id];
     this.game.audio?.ui('tick');
     opt.onPick?.();
@@ -98,7 +101,7 @@ export class Phone {
   }
   // Temas para iniciar conversación: se rotan para no repetir siempre lo mismo
   topics(id, n = 3) {
-    const all = topicsFor(this, id); if (!all.length) return [];
+    const all = topicsFor(this, id).map((t) => ({ ...t, label: genderize(t.label, this.game.female) })); if (!all.length) return [];
     let used = this.used[id] || [];
     if (all.every((t) => used.includes(t.key))) used = this.used[id] = [];
     return all.filter((t) => !used.includes(t.key)).slice(0, n);

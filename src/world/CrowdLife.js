@@ -4,6 +4,7 @@ import { rand, pick, clamp, damp } from '../core/MathUtil.js';
 import { APRON_X, APRON_Z } from './Stadium.js';
 import * as TX from '../gfx/Textures.js';
 import { CONTACTS } from '../phone/Phone.js';
+import { genderize } from '../player/Look.js';
 
 /*
  * Vida del público: el estadio se llena según cuánto falte para el saque,
@@ -90,7 +91,7 @@ export class CrowdLife {
       diego: ['¡Maeee! ¡Gracias por las entradas, sos lo máximo!', 'Si hay gol, te lo grito en la cara 😂 ¡Tomanos una foto!'],
       andy: ['¡Pura vida, mae! ¡Ya tengo la bandera lista!', 'Sacanos una foto pa la historia, compa.'],
     }[c.id] || ['¡Hola! Gracias por las entradas.'];
-    await g.ui.dialogue(lines.map((text) => ({ ...S, text })));
+    await g.ui.dialogue(lines.map((text) => ({ ...S, text: genderize(text, g.female) })));
   }
   skipTo() { const st = this.game.stadium; if (st) st.crowd.uniforms.uFill.value = this.targetFill(); }
   minutesToKickoff() { const g = this.game, ev = this.ev; if (!ev || g.story.kickedOff) return 0; return ev.kickoff - g.clock; }

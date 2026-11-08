@@ -1,5 +1,6 @@
 import { h, clear } from '../ui/dom.js';
 import { formatMoney } from '../core/MathUtil.js';
+import { genderize } from '../player/Look.js';
 
 /*
  * Productos de pulpería, soda y bar. Cada uno tiene un efecto real en el juego:
@@ -35,7 +36,7 @@ export const CATALOG = {
 const GREET = {
   pulperia: ['¡Buenas! ¿Qué le damos?', 'Pase adelante. ¿Qué se le ofrece?', '¡Diay! ¿Qué va a llevar hoy?'],
   soda: ['¡Buenas! Hoy el casado está buenísimo.', 'Siéntese donde guste. ¿Qué le sirvo?', 'Tenemos cafecito recién chorreado.'],
-  bar: ['¡Pura vida! ¿Viene a ver el partido?', 'Bienvenido. Hoy hay boca de chifrijo.', '¿Qué le sirvo, compa?'],
+  bar: ['¡Pura vida! ¿Viene a ver el partido?', 'Bienvenido/a. Hoy hay boca de chifrijo.', '¿Qué le sirvo, compa?'],
 };
 export const KEEPER_LOOKS = {
   pulperia: { skin: '#c68d63', hair: '#3a2817', shirt: '#2a9d8f', pants: '#2b2b38', boots: '#222', height: 1.66, female: true, vest: '#ffffff' },
@@ -75,7 +76,7 @@ export function openShopCounter(game, shop) {
     body.append(h('div', { class: 'shop-foot' }, bl.length ? h('div', {}, 'Efectos activos: ', bl.join(' · ')) : h('div', { class: 'muted' }, 'Lo que comprés tiene efecto: energía para correr, pulso más firme o autofoco más rápido.'),
       h('button', { class: 'btn', onclick: () => g.resume() }, 'Volver')));
   };
-  shop.greet = GREET[shop.kind][Math.floor(Math.random() * 3)];
+  shop.greet = genderize(GREET[shop.kind][Math.floor(Math.random() * 3)], g.female);
   render();
   g.ui.openScreen('shop', h('div', { class: 'screen' }, h('div', { class: 'panel shop-panel' }, body)));
 }

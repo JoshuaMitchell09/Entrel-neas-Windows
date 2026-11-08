@@ -5,8 +5,8 @@ import { damp } from '../core/MathUtil.js';
 export class ViewModel {
   constructor(game) {
     this.game = game; this.root = new THREE.Group(); this.root.visible = false; game.camera.add(this.root);
-    const skin = new THREE.MeshStandardMaterial({ color: 0xc68d63, roughness: 0.6 });
-    const sleeve = new THREE.MeshStandardMaterial({ color: 0x2f3e46, roughness: 0.85 });
+    const skin = (this.skinMat = new THREE.MeshStandardMaterial({ color: game.player?.look?.skin || 0xc68d63, roughness: 0.6 }));
+    const sleeve = (this.sleeveMat = new THREE.MeshStandardMaterial({ color: game.player?.look?.shirt || 0x2f3e46, roughness: 0.85 }));
     const body = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.45, metalness: 0.25 });
     const rubber = new THREE.MeshStandardMaterial({ color: 0x0c0c0c, roughness: 0.9 });
     const rig = (this.rig = new THREE.Group()); this.root.add(rig);
@@ -25,6 +25,7 @@ export class ViewModel {
     this.root.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.renderOrder = 10; } });
     this.sway = new THREE.Vector2(); this.lastYaw = 0; this.lastPitch = 0; this.t = 0;
   }
+  setSkin(skin, shirt) { this.skinMat.color.set(skin); this.sleeveMat.color.set(shirt); }
   update(dt) {
     const cb = this.game.inventory.camera;
     if (cb && this.lastBody !== cb.id) { this.lastBody = cb.id; const lk = cb.look || { size: 1, color: '#151515' }; this.camMesh.scale.setScalar(lk.size); this.gripMesh.visible = !!lk.grip; this.bodyMat.color.set(lk.color); this.game.player.avatar.setCameraBody(lk); }

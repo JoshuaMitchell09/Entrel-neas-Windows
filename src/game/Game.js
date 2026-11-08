@@ -136,8 +136,10 @@ export class Game {
     this.ui.toast(`${ev.title}: ${this.teamName(ev.home)} vs ${this.teamName(ev.away)}`, 'mission', 4000);
   }
   // ---------------- Partidas ----------------
-  async newGame(name) {
+  get female() { return this.player?.look?.gender === 'mujer'; }
+  async newGame(name, look) {
     this.arcade = false;
+    if (look) this.player.applyLook(look);
     this.playerName = name; this.profileId = 'p_' + Date.now();
     await this.photos.setProfile(this.profileId);
     this.career.reset(); this.inventory.reset(); this.missions.active = []; this.missions.done = []; this.story.introDone = false; this.phone.reset();
@@ -149,6 +151,7 @@ export class Game {
     this.playerName = d.playerName; this.profileId = d.profileId;
     await this.photos.setProfile(this.profileId);
     this.career.reset(); this.career.load(d.career); this.inventory.reset(); this.inventory.load(d.inventory); this.missions.load(d.missions); this.story.load(d.story); this.phone.load(d.phone);
+    if (d.look) this.player.applyLook(d.look);
   }
   async continueGame() { const l = this.saves.latest(); if (l) await this.loadSlot(l.slot); }
   async loadSlot(slot) {

@@ -86,9 +86,11 @@ export class Humanoid {
     const bones = [];
     const P = (parent, x, y, z) => { const b = new THREE.Bone(); b.position.set(x, y, z); parent.add(b); bones.push(b); return b; };
     this.hips = P(body, 0, 0.94, 0);
-    mk(g.pelvis, legsC || shortsC, this.hips, 0, 0.02, 0, 1.18, 1, 0.82);
+    const fem = !!o.female;
+    mk(g.pelvis, legsC || shortsC, this.hips, 0, 0.02, 0, fem ? 1.26 : 1.18, 1, fem ? 0.86 : 0.82);
     this.spine = P(this.hips, 0, 0.1, 0);
-    mk(g.torso, shirtC, this.spine, 0, -0.02, 0, 1.3, 1, 0.74);
+    mk(g.torso, shirtC, this.spine, 0, -0.02, 0, fem ? 1.16 : 1.3, 1, fem ? 0.76 : 0.74);
+    if (fem) { mk(g.chin, shirtC, this.spine, -0.055, 0.27, 0.075, 1.15, 1.1, 1.1); mk(g.chin, shirtC, this.spine, 0.055, 0.27, 0.075, 1.15, 1.1, 1.1); }
     if (!o.vest) mk(g.collar, o.collar ? col(o.collar) : shirtC, this.spine, 0, 0.47, 0.005, 1.25, 1, 1.1);
     if (o.vest) mk(g.vest, col(o.vest), this.spine, 0, 0.23, 0, 1.33, 1, 0.82);
     if (o.lanyard) mk(g.lanyard, col('#f4f4f4'), this.spine, 0, 0.16, 0.122);
@@ -102,7 +104,7 @@ export class Humanoid {
     else if (style === 'buzz' || style === 'fade') mk(g.hair, hairC, this.head, 0, style === 'fade' ? 0.03 : 0.012, -0.006, 0.955, style === 'fade' ? 0.95 : 1.0, 1.0);
     else if (style === 'curly') { mk(g.hair, hairC, this.head, 0, 0.02, -0.008, 1.02, 1.1, 1.06); for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; mk(g.curl, hairC, this.head, Math.cos(a) * 0.07, 0.075 + (i % 2) * 0.012, Math.sin(a) * 0.065 - 0.01); } }
     else if (style === 'long') { mk(g.hair, hairC, this.head, 0, 0.012, -0.012, 1.0, 1.08, 1.08); mk(g.pony, hairC, this.head, 0, -0.06, -0.1, 1.0, 1.15, 1.0); mk(g.pony, hairC, this.head, 0, -0.03, -0.075, 2.5, 0.85, 0.9); }
-    if (!o.female && (o.beard ?? Math.random() < 0.28)) mk(g.beard, hairC, this.head, 0, -0.004, 0.0, 1.0, 1.0, 1.06);
+    if (!o.female && style !== 'long' && (o.beard ?? Math.random() < 0.28)) mk(g.beard, hairC, this.head, 0, -0.004, 0.0, 1.0, 1.0, 1.06);
     mk(g.chin, skin, this.head, 0, -0.068, 0.045);
     const eyeC = col('#151010'), white = col('#d8d0c6'), browC = col(TX_shade(o.hair || '#1b130e')), lipC = col(o.female ? '#a8505a' : '#8a4a3e');
     for (const ex of [-0.037, 0.037]) { mk(g.eyeW, white, this.head, ex, 0.018, 0.093); mk(g.eye, eyeC, this.head, ex, 0.018, 0.1, 0.62, 0.62, 0.5); mk(g.brow, browC, this.head, ex, 0.044, 0.1); }
@@ -112,7 +114,7 @@ export class Humanoid {
     if (o.cap) { const cc = col(o.cap); mk(g.cap, cc, this.head, 0, 0.07, 0); mk(g.visor, cc, this.head, 0, 0.045, 0.1); }
     this.arms = [];
     for (const sd of [-1, 1]) {
-      const sh = P(this.spine, sd * 0.205, 0.42, 0);
+      const sh = P(this.spine, sd * (fem ? 0.182 : 0.205), 0.42, 0);
       mk(g.joint, sleeveC, sh, 0, -0.005, 0, 0.06, 0.057, 0.058);
       if (o.armband && sd > 0) mk(g.band, col('#f2c500'), sh, 0, -0.17, 0);
       mk(g.upperArm, o.longSleeves ? sleeveC : skin, sh);

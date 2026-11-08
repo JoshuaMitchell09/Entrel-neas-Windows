@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Humanoid } from '../characters/Humanoid.js';
+import { humanoidOpts, loadGlobalLook } from './Look.js';
 import { clamp, damp, dampAngle } from '../core/MathUtil.js';
 
 /*
@@ -10,13 +11,25 @@ import { clamp, damp, dampAngle } from '../core/MathUtil.js';
 export class PlayerController {
   constructor(game) {
     this.game = game;
-    this.avatar = new Humanoid({ skin: '#c68d63', shirt: '#2f3e46', shorts: '#2b2b2b', pants: '#3d4a5c', boots: '#5a4636', hair: '#1b130e',
-      backpack: '#22333b', lanyard: true, cap: '#0b3d91', longSleeves: false, height: 1.76 });
+    this.look = loadGlobalLook();
+    this.avatar = new Humanoid(humanoidOpts(this.look));
     this.root = this.avatar.root; game.scene.add(this.root);
     this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3(); this.yaw = 0; this.vy = 0; this.grounded = true;
     this.radius = 0.32; this.speed = 0; this.crouch = false; this.cameraEquipped = false; this.inViewfinder = false;
     this.frozen = false; this.stamina = 1; this.stepAcc = 0; this.surface = 'concrete';
     this.footstepCb = null;
+  }
+  // Cambia la apariencia sin perder posición, cámara colgada ni lente
+  applyLook(look) {
+    this.look = { ...look };
+    const old = this.root, parent = old.parent, vis = old.visible, bpVis = this.avatar.backpack?.visible !== false;
+    this.avatar = new Humanoid(humanoidOpts(this.look));
+    this.root = this.avatar.root; this.root.position.copy(old.position); this.root.rotation.copy(old.rotation); this.root.visible = vis;
+    if (parent) { parent.remove(old); parent.add(this.root); }
+    this.avatar.showCamera(this.cameraEquipped); this.avatar.setLensLength(this.game.inventory.lens.max);
+    if (this.avatar.backpack) this.avatar.backpack.visible = bpVis;
+    this.avatar.setCameraBody(this.game.inventory.camera?.look);
+    this.game.viewModel?.setSkin(this.look.skin, this.look.shirt);
   }
   place(x, z, yaw = 0) { this.pos.set(x, 0, z); this.yaw = yaw; this.vel.set(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = yaw; }
   get forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }

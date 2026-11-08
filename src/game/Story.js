@@ -158,7 +158,7 @@ export class Story {
     }
     const st = STADIUMS[ev.stadium];
     const lines = this.intro ? [
-      { ...M, text: `¡Hola! Vos debés ser ${g.playerName}, el nuevo colaborador de Ascenso Total. Soy Mariana Quesada, coordinadora de prensa de la Liga.` },
+      { ...M, text: `¡Hola! Vos debés ser ${g.playerName}, ${g.female ? 'la nueva colaboradora' : 'el nuevo colaborador'} de Ascenso Total. Soy Mariana Quesada, coordinadora de prensa de la Liga.` },
       { ...M, text: 'Dejame verificar en la lista… aquí estás. Esta es tu acreditación: es personal e intransferible.' },
       { ...M, text: 'Te da acceso al túnel, a la sala de prensa y a las zonas de fotógrafos pintadas en azul detrás de las porterías.' },
       { ...M, text: 'Reglas: nunca pisés la cancha y no entrés al área técnica mientras se juega. Si querés cambiar de lado, rodeá por la banda opuesta o por el pasillo detrás de los bancos. Tres faltas y seguridad te saca.' },
@@ -275,7 +275,7 @@ export class Story {
     if (this.stage === 'inside' || this.stage === 'field') {
       const first = !this.introDone && this.intro;
       const lines = first ? [
-        { ...A, text: `¡Diay, mae! Vos sos ${g.playerName}, el nuevo. Kendall Rojas, treinta años sentado detrás de estas porterías. Bienvenido a la cancha.` },
+        { ...A, text: `¡Diay, mae! Vos sos ${g.playerName}, ${g.female ? 'la nueva' : 'el nuevo'}. Kendall Rojas, treinta años sentado detrás de estas porterías. ${g.female ? 'Bienvenida' : 'Bienvenido'} a la cancha.` },
         { ...A, text: `Primero lo primero: sacá la cámara con ${g.ui.key('equip')}. Con clic derecho levantás el visor y con la rueda del mouse hacés zoom.` },
         { ...A, text: `En fútbol la velocidad lo es todo: a 1/1000 o más rápido congelás a los jugadores. En el visor, ${g.ui.key('paramPrev')} y ${g.ui.key('paramNext')} eligen el parámetro; ${g.ui.key('paramDec')} y ${g.ui.key('paramInc')} lo cambian. Dejá el ISO en AUTO si la luz cambia.` },
         { ...A, text: `El enfoque AF-C sigue al jugador: cuando el cuadro se pone verde, está nítido. Con ${g.ui.key('autofocus')} reenfocás sobre lo que tengas en el centro. Con ${g.ui.key('driveMode')} pasás a ráfaga.` },
@@ -315,7 +315,7 @@ export class Story {
     // Disparadores por ubicación
     if (this.stage === 'credential' && p.z < st.gateZ + 14 && Math.abs(p.x) < 12 && !this.gateHinted) { this.gateHinted = true; g.ui.toast('Presentá tu acreditación al guardia de seguridad.', 'info'); g.events.emit('story:gate'); g.missions.add('m_seguridad'); }
     const inBowl = Math.abs(p.x) < 64 && Math.abs(p.z) < 43.6;
-    if (inBowl && !this.inBowlOnce) { this.inBowlOnce = true; if (this.stage === 'inside') { this.stage = 'field'; this.setObjective(); } g.ui.toast(`Bienvenido al ${STADIUMS[this.ev.stadium].name}.`, 'info'); }
+    if (inBowl && !this.inBowlOnce) { this.inBowlOnce = true; if (this.stage === 'inside') { this.stage = 'field'; this.setObjective(); } g.ui.toast(`${g.female ? 'Bienvenida' : 'Bienvenido'} al ${STADIUMS[this.ev.stadium].name}.`, 'info'); }
     // Reloj del día y saque inicial
     if (!this.kickedOff) {
       g.clock += dt / 4.2;

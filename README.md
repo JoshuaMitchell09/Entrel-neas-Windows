@@ -16,6 +16,7 @@ Esta es la versión de escritorio para **Windows 10/11 (64 bits)**. Tiene todo l
 - **Puerta de seguridad:** puerta de vidrio transparente y corrediza.
 - **Modo dron / tráiler** (`K`): 7 tomas, cámara lenta y franjas de cine. `R` graba un video con sonido, que queda en `Videos\Entre Lineas`.
 - **Pulpería, soda y bar** con interior: se entra caminando y lo que comprés tiene efecto en el juego.
+- **Personalizá a tu fotógrafo:** hombre o mujer, tono de piel, peinado, color de pelo, barba y ropa, con vista previa 3D.
 - **Más cámaras y lentes**, conversaciones más largas en el teléfono, caras y peinados más realistas, vallas LED y resolución dinámica para mantener los FPS.
 
 ## Descargar el juego (sin programar nada)
