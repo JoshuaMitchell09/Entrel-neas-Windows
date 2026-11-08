@@ -151,6 +151,7 @@ export class Screens {
     for (const [k, l] of tabs) { const b = h('button', { class: 'tab', onclick: () => go(k) }, l); b.dataset.t = k; bar.append(b); }
     bar.append(h('div', { class: 'spacer' }),
       h('button', { class: 'btn small', onclick: () => g.resume() }, g.state === 'play' ? '▶ Reanudar (Esc)' : '← Volver'),
+      g.state === 'play' ? h('button', { class: 'btn small', onclick: () => { g.resume(); g.drone.enter(); } }, '🎥 Modo dron (K)') : null,
       g.arcade && g.state === 'play' ? h('button', { class: 'btn small', onclick: () => g.arcadeEnd() }, '⏹ Terminar partido') : null,
       h('button', { class: 'btn small danger', onclick: async () => { if (await this.ui.confirm(g.arcade ? 'Saldrás del partido arcade.' : g.inEvent ? 'Si salís ahora abandonarás el evento (−10 de reputación al liquidar). El progreso guardado se conserva.' : 'Volverás al menú principal. Se guardará automáticamente.', 'Salir al menú')) g.quitToMenu(); } }, 'Salir al menú'));
     const el = h('div', { class: 'screen tabs-screen' }, h('div', { class: 'tabs-wrap panel' }, bar, body));
@@ -260,6 +261,7 @@ export class Screens {
       h('div', {}, h('div', { class: 'h3' }, 'Gráficos'),
         row('Calidad', sel('quality', Object.keys(QUALITY_PRESETS).map((k) => [k, k[0].toUpperCase() + k.slice(1)]), () => g.applyQuality())),
         row('Escala de resolución', rng('resolutionScale', 0.5, 1.5, 0.05, () => g.applyQuality())),
+        row('Resolución dinámica (mantiene los FPS estables)', chk('dynRes', () => { g.dynScale = 1; g.resize(); })),
         row('Vista', sel('view', [['tercera', 'Tercera persona'], ['primera', 'Primera persona']], () => { g.follow.fpPitch = 0; g.follow.snap(g.player); })),
         row('Campo de visión (exploración)', rng('fov', 50, 85, 1)), row('Distancia de cámara', rng('cameraDistance', 1.8, 6, 0.1, () => { g.follow.dist = s.cameraDistance; })),
         row('Mostrar FPS', chk('showFps')),

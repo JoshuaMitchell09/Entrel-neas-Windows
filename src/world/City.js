@@ -3,6 +3,7 @@ import * as TX from '../gfx/Textures.js';
 import { stdMat } from '../characters/Humanoid.js';
 import { seededRandom } from '../core/MathUtil.js';
 import { mergeStatic } from '../gfx/Merge.js';
+import { buildShopInterior, SHOP_KINDS } from './ShopInteriors.js';
 
 const SHOPS = [
   ['Soda La Bendición', '#f6d55c', '#7a2e00', '#e9d8a6'], ['Pulpería El Carmen', '#2a9d8f', '#ffffff', '#f4a261'],
@@ -20,9 +21,11 @@ export class City {
     this.game = game; this.col = game.collision; this.group = new THREE.Group(); game.scene.add(this.group);
     this.gz = gateZ; this.P = gateZ + 34; // borde sur de la acera sur
     this.rnd = seededRandom(42);
-    this.cars = []; this.spots = {}; this.lamps = []; this.vendorSpots = [];
+    this.cars = []; this.spots = {}; this.lamps = []; this.vendorSpots = []; this.shops = [];
     this.night = game.env.time === 'night';
     this.buildGround(); this.buildStreet(); this.buildBuildings(); this.buildPlaza(); this.buildProps(); this.buildCars(); this.bounds();
+    // Luz compartida de interiores (se crea desde el inicio para no recompilar materiales al entrar)
+    if (this.shops.length) { this.shopLight = new THREE.PointLight(0xfff0d8, 0, 13, 1.4); this.group.add(this.shopLight); }
     for (const c of this.cars) c.obj.userData.noMerge = true;
     this.merged = mergeStatic(this.group);
   }
@@ -53,14 +56,15 @@ export class City {
     for (let i = 0; i < 8; i++) this.plane(0.6, 11, white, -3.5 + i * 1, 0.013, P + 10); // paso peatonal (zebra)
     this.spots.crosswalk = new THREE.Vector3(0, 0, P + 10);
   }
-  building(x, z, w, d, h, facing, shop, color) {
+  building(x, z, w, d, h, facing, shop, color, interior = null) {
     const env = this.game.env;
     // facing: +1 la fachada mira hacia +z ; -1 hacia -z
     const wallMat = new THREE.MeshStandardMaterial({ map: TX.paintedWallTexture(color, Math.floor(this.rnd() * 99), { band: TX.shade(color, -40) }), roughness: 0.9 });
     wallMat.map.repeat.set(w / 6, h / 5);
-    const b = this.box(w, h, d, wallMat, x, h / 2, z);
-    this.col.addCentered(x, z, w, d, h);
     const fz = z + facing * (d / 2 + 0.01);
+    let b = null;
+    if (interior) this.shops.push(buildShopInterior(this, interior, x, z, w, d, h, wallMat));
+    else { b = this.box(w, h, d, wallMat, x, h / 2, z); this.col.addCentered(x, z, w, d, h); }
     // Alero de zinc
     const roofM = new THREE.MeshStandardMaterial({ map: TX.zincRoofTexture([w / 3, 1]), roughness: 0.5, metalness: 0.6 });
     const eave = this.box(w + 0.6, 0.06, 1.6, roofM, x, h * 0.55 > 3.2 ? 3.2 : h * 0.55, z + facing * (d / 2 + 0.75)); eave.rotation.x = facing * 0.18;
@@ -70,21 +74,25 @@ export class City {
     const winM = new THREE.MeshStandardMaterial({ map: winTex, roughness: 0.2, metalness: 0.2, emissive: 0xffd28a, emissiveIntensity: 0, emissiveMap: litTex }); if (lit) env.register(winM, 'emissiveIntensity', 0, 0.45);
     const doorM = stdMat(TX.shade(color, -70), 0.6);
     const doorX = x + (this.rnd() - 0.5) * (w - 3);
-    const door = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.4), shop ? new THREE.MeshStandardMaterial({ color: 0x2a2f33, roughness: 0.3, metalness: 0.5 }) : doorM);
-    door.position.set(doorX, 1.2, fz + facing * 0.01); if (facing < 0) door.rotation.y = Math.PI; this.group.add(door);
+    if (!interior) {
+      const door = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.4), shop ? new THREE.MeshStandardMaterial({ color: 0x2a2f33, roughness: 0.3, metalness: 0.5 }) : doorM);
+      door.position.set(doorX, 1.2, fz + facing * 0.01); if (facing < 0) door.rotation.y = Math.PI; this.group.add(door);
+    }
     for (let wx = x - w / 2 + 1.2; wx < x + w / 2 - 1; wx += 2.4) {
-      if (Math.abs(wx - doorX) < 1.6) continue;
-      const win = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), winM); win.position.set(wx, 1.6, fz + facing * 0.02); if (facing < 0) win.rotation.y = Math.PI; this.group.add(win);
-      if (h > 5) { const w2 = win.clone(); w2.position.y = 4.6; this.group.add(w2); }
+      if (!interior && Math.abs(wx - doorX) < 1.6) continue;
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.2), winM); win.position.set(wx, interior ? 4.6 : 1.6, fz + facing * 0.02); if (facing < 0) win.rotation.y = Math.PI;
+      if (!interior || h > 5) this.group.add(win);
+      if (!interior && h > 5) { const w2 = win.clone(); w2.position.y = 4.6; this.group.add(w2); }
     }
     if (shop) {
       const [name, bg, fg] = shop;
       const signM = new THREE.MeshStandardMaterial({ map: TX.signTexture(name, bg, fg, 768, 110, 'bold 60px Georgia, serif', fg), emissive: 0xffffff, emissiveIntensity: 0 }); signM.emissiveMap = signM.map; env.register(signM, 'emissiveIntensity', 0, 0.25);
       const sign = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(w - 0.6, 7), 0.9), signM);
-      sign.position.set(x, 2.75, fz + facing * 0.04); if (facing < 0) sign.rotation.y = Math.PI; this.group.add(sign);
+      sign.position.set(x, interior ? 3.05 : 2.75, fz + facing * 0.04); if (facing < 0) sign.rotation.y = Math.PI; this.group.add(sign);
     }
     // Tanque/antena en el techo
     if (this.rnd() > 0.5) this.box(1.2, 1.2, 1.2, stdMat('#2f4f6f', 0.6), x + (this.rnd() - 0.5) * w * 0.6, h + 0.6, z);
+    if (interior) return null;
     return b;
   }
   buildBuildings() {
@@ -98,10 +106,14 @@ export class City {
     }
     // Lado sur: edificios a ambos lados de la plaza
     for (const side of [-1, 1]) {
+      // Del lado oeste (por donde llega el fotógrafo) los primeros locales tienen interior y se puede entrar
+      const kinds = side < 0 ? ['bar', 'pulperia', 'soda'] : [];
       for (let x = 62; x < 165;) {
-        const w = 8 + Math.floor(this.rnd() * 7), h = this.rnd() > 0.6 ? 7 : 4.2, d = 12;
-        const shop = this.rnd() > 0.3 ? SHOPS[si++ % SHOPS.length] : null;
-        this.building(side * (x + w / 2), P - 0.5 - d / 2, w - 0.2, d, h, 1, shop, shop ? shop[3] : HOUSE_COLORS[Math.floor(this.rnd() * HOUSE_COLORS.length)]);
+        const kind = kinds.length && x > 66 ? kinds.shift() : null;
+        let w = 8 + Math.floor(this.rnd() * 7); const h = this.rnd() > 0.6 ? 7 : 4.2, d = 12;
+        let shop = this.rnd() > 0.3 ? SHOPS[si++ % SHOPS.length] : null;
+        if (kind) { w = Math.max(w, 11); const K = SHOP_KINDS[kind]; shop = [K.name, K.bg, K.fg, K.wall]; }
+        this.building(side * (x + w / 2), P - 0.5 - d / 2, w - 0.2, d, h, 1, shop, shop ? shop[3] : HOUSE_COLORS[Math.floor(this.rnd() * HOUSE_COLORS.length)], kind);
         x += w;
       }
     }
@@ -262,6 +274,16 @@ export class City {
     this.col.add(-175, 0, P + 20.4, 175, 10, P + 22);
   }
   update(dt, playerPos, audio) {
+    // Una sola luz para los interiores: se coloca en el local donde está (o al que se acerca) el jugador
+    if (this.shops.length) {
+      if (!this.shopLight) { this.shopLight = new THREE.PointLight(0xfff0d8, 0, 13, 1.4); this.group.add(this.shopLight); }
+      let best = null, bd = 14;
+      for (const s of this.shops) { const b = s.bounds, dx = Math.max(b.x0 - playerPos.x, 0, playerPos.x - b.x1), dz = Math.max(b.z0 - playerPos.z, 0, playerPos.z - b.z1), dd = Math.hypot(dx, dz); if (dd < bd) { bd = dd; best = s; } }
+      const L = this.shopLight;
+      if (best) { L.position.copy(best.lightPos); L.color.set(best.warm ? 0xffc489 : 0xfff0d8); }
+      L.intensity = best ? (best.warm ? 22 : 30) * Math.min(1, (14 - bd) / 6) : 0;
+      this.playerShop = best && bd === 0 ? best : null;
+    }
     for (const c of this.cars) {
       let target = c.speed;
       // Detenerse si el jugador está en la calzada delante del carro (o en el paso peatonal)

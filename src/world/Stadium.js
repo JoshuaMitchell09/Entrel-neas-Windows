@@ -94,9 +94,22 @@ export class Stadium {
       this.col.addRotated(x, z, len, 0.3, ry, boardH);
     };
     let k = 0;
+    // Vallas LED en las bandas: un solo atlas con todas las marcas que rota como en los estadios reales
+    const N = ADS.length, atlas = document.createElement('canvas'); atlas.width = 1024; atlas.height = 128 * N;
+    const actx = atlas.getContext('2d'); ADS.forEach((ad, i) => actx.drawImage(TX.adTexture(...ad).image, 0, 128 * (N - 1 - i)));
+    // Rejilla de píxeles LED
+    actx.globalAlpha = 0.16; actx.fillStyle = '#000'; for (let y = 0; y < atlas.height; y += 4) actx.fillRect(0, y, 1024, 1); for (let x = 0; x < 1024; x += 4) actx.fillRect(x, 0, 1, atlas.height); actx.globalAlpha = 1;
+    const led = new THREE.CanvasTexture(atlas); led.colorSpace = THREE.SRGBColorSpace; led.anisotropy = 8; led.wrapT = THREE.RepeatWrapping; led.repeat.set(1, 1 / N);
+    this.led = { tex: led, n: N, idx: 0, t: 0 };
+    const ledM = new THREE.MeshStandardMaterial({ map: led, emissive: 0xffffff, emissiveMap: led, emissiveIntensity: 0.45, roughness: 0.35 }); this.game.env.register(ledM, 'emissiveIntensity', 0.45, 0.95);
+    const mkLed = (len, x, z, ry) => {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(len, boardH, 0.25), [this.m.darkSteel, this.m.darkSteel, this.m.darkSteel, this.m.darkSteel, ledM, this.m.darkSteel]);
+      b.position.set(x, boardH / 2, z); b.rotation.y = ry; b.castShadow = true; b.receiveShadow = true; this.group.add(b);
+      this.col.addRotated(x, z, len, 0.3, ry, boardH);
+    };
     // Laterales: lado lejano completo; lado cercano con hueco en el área técnica.
-    for (let x = -50; x < 50; x += 10) { mkBoard(9.9, x + 5, -38.5, 0, ADS[k++ % ADS.length]); }
-    for (let x = -50; x < 50; x += 10) { if (x >= -20 && x < 20) continue; mkBoard(9.9, x + 5, 38.5, Math.PI, ADS[k++ % ADS.length]); }
+    for (let x = -50; x < 50; x += 10) mkLed(9.9, x + 5, -38.5, 0);
+    for (let x = -50; x < 50; x += 10) { if (x >= -20 && x < 20) continue; mkLed(9.9, x + 5, 38.5, Math.PI); }
     // Detrás de las porterías (dejan pasillos en las esquinas)
     for (const s of [-1, 1]) for (let z = -28; z < 28; z += 8) mkBoard(7.9, s * 59.6, z + 4, s > 0 ? -Math.PI / 2 : Math.PI / 2, ADS[k++ % ADS.length]);
   }
@@ -611,6 +624,14 @@ export class Stadium {
   update(dt, t, excite) {
     this.crowd.uniforms.uTime.value = t;
     for (const d of this.doors) d.update(dt);
+    // Rotación de las vallas LED: cada 8 s se desliza a la siguiente marca
+    if (this.led) {
+      const L = this.led; L.t += dt;
+      if (L.t > 8) { L.t = 0; L.idx = (L.idx + 1) % L.n; }
+      const target = L.idx / L.n, cur = L.tex.offset.y;
+      let next = cur + Math.min(1, dt * 5) * (((target - cur + 1.5) % 1) - 0.5);
+      L.tex.offset.y = ((next % 1) + 1) % 1;
+    }
     // Banderas ondeando
     for (const f of this.flags) {
       const pos = f.geometry.attributes.position, base = f.userData.base;

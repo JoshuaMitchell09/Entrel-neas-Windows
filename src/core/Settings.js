@@ -27,7 +27,7 @@ export class Settings {
     this.data = {
       quality: 'medio', sensitivity: 1, invertY: false, fov: 60, cameraDistance: 3.4,
       master: 0.85, music: 0.5, sfx: 0.9, ambient: 0.8, voices: false, subtitles: true,
-      showFps: false, halfSeconds: 240, view: 'tercera', bindings: { ...DEFAULT_BINDINGS }, resolutionScale: 1,
+      showFps: false, halfSeconds: 240, view: 'tercera', bindings: { ...DEFAULT_BINDINGS }, resolutionScale: 1, dynRes: true,
     };
     try {
       const raw = localStorage.getItem(KEY);

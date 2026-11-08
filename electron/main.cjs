@@ -68,9 +68,10 @@ app.whenReady().then(async () => {
     if (input.key === 'F11') { win.setFullScreen(!win.isFullScreen()); e.preventDefault(); }
     if (input.key === 'I' && input.control && input.shift) win.webContents.toggleDevTools();
   });
-  // Descargas (exportar JPG): guardar en la carpeta Imágenes/Entre Lineas
+  // Descargas: fotos JPG a Imágenes/Entre Lineas y videos del modo dron a Videos/Entre Lineas
   win.webContents.session.on('will-download', (e, item) => {
-    const dir = path.join(app.getPath('pictures'), 'Entre Lineas'); fs.mkdirSync(dir, { recursive: true });
+    const isVideo = /\.(mp4|webm)$/i.test(item.getFilename());
+    const dir = path.join(app.getPath(isVideo ? 'videos' : 'pictures'), 'Entre Lineas'); fs.mkdirSync(dir, { recursive: true });
     item.setSavePath(path.join(dir, item.getFilename()));
     item.once('done', (ev, state) => { if (state === 'completed') shell.showItemInFolder(item.getSavePath()); });
   });

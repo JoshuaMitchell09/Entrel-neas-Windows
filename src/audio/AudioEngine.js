@@ -263,7 +263,7 @@ export class AudioEngine {
   // Obturador: cada cámara suena distinto (espejo + cortinilla).
   shutter(type) {
     if (!this.ctx) return;
-    const cfg = { basic: [0.5, 900, 0.06, 0.045, 0.35], sport: [0.35, 1500, 0.04, 0.03, 0.28], pro: [0.25, 2400, 0.03, 0.02, 0.24], flagship: [0.12, 3800, 0.018, 0.012, 0.18] }[type] || [0.4, 1200, 0.05, 0.04, 0.3];
+    const cfg = { basic: [0.5, 900, 0.06, 0.045, 0.35], sport: [0.35, 1500, 0.04, 0.03, 0.28], pro: [0.25, 2400, 0.03, 0.02, 0.24], flagship: [0.12, 3800, 0.018, 0.012, 0.18], classic: [0.75, 650, 0.09, 0.07, 0.42], mirrorless: [0.06, 5200, 0.012, 0.008, 0.11], silent: [0.0, 6800, 0.006, 0.004, 0.035] }[type] || [0.4, 1200, 0.05, 0.04, 0.3];
     const [mirror, f, d1, gap, peak] = cfg;
     this.noiseHit(this.sfx, d1, 'bandpass', f, 2, peak);
     this.tone(this.sfx, 'square', f * 0.25, f * 0.1, d1, peak * 0.25 * mirror);

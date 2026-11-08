@@ -55,6 +55,21 @@ export class PostFX {
   }
   resize(w, h, pr) { if (!this.composer) return; this.composer.setPixelRatio(pr); this.composer.setSize(w, h); this.gtao?.setSize?.(w * pr, h * pr); }
   draw(camera) {
+    this.drawScene(camera);
+    // Franjas de cine (2.39:1) dibujadas en el propio lienzo: salen en las grabaciones
+    const lb = this.letterbox || 0;
+    if (lb > 0.01) {
+      const r = this.game.renderer, s = r.getSize(new THREE.Vector2()), bar = Math.round(Math.max(0, (s.y - s.x / 2.39) / 2) * lb);
+      if (bar > 0) {
+        const cc = r.getClearColor(new THREE.Color()), ca = r.getClearAlpha(), ac = r.autoClear;
+        r.setScissorTest(true); r.setClearColor(0x000000, 1);
+        r.setScissor(0, 0, s.x, bar); r.clear(true, false, false);
+        r.setScissor(0, s.y - bar, s.x, bar); r.clear(true, false, false);
+        r.setScissorTest(false); r.setClearColor(cc, ca); r.autoClear = ac;
+      }
+    }
+  }
+  drawScene(camera) {
     if (!this.composer) { this.game.renderer.render(this.game.scene, camera); return; }
     this.render.camera = camera; if (this.gtao) this.gtao.camera = camera;
     this.grade.uniforms.uTime.value = performance.now() * 0.001 % 100;

@@ -1,5 +1,6 @@
 import { h, clear } from '../ui/dom.js';
 import { formatClock, pick, rand } from '../core/MathUtil.js';
+import { topicsFor } from './Conversations.js';
 
 /*
  * Teléfono del fotógrafo: mensajería con familia y amigos, la red social «Lente»
@@ -18,18 +19,6 @@ export const CONTACTS = [
   { id: 'editor', name: 'Ricardo Solano', sub: 'editor · Ascenso Total', emoji: '📰', color: '#c8102e' },
 ];
 const C = Object.fromEntries(CONTACTS.map((c) => [c.id, c]));
-// Charla casual: lo que el jugador puede escribir y cómo responde cada contacto
-const SMALLTALK = {
-  mama: [['¡Hola, ma! Aquí trabajando 📸', ['¡Qué orgullo! Cuidate mucho ❤️', '¿Ya comiste algo? No andés con el estómago vacío.', 'Mandame una foto bonita cuando podás 😊']], ['¿Cómo estás?', ['Bien, mi amor. Viendo el partido por tele a ver si te veo 📺', 'Aquí, rezando para que te vaya bien 🙏']]],
-  papa: [['Pa, ¿lo estás viendo?', ['¡Claro! Ya puse el canal. ¿Dónde estás vos?', 'Sí, con el radio y la tele 😄']], ['¡Pura vida, pa!', ['¡Pura vida! Disfrutá el trabajo 👍']]],
-  vale: [['Vale, ¿qué hacés?', ['Viendo tus fotos en Lente, están buenísimas 😍', 'Nada, aburrida. Mandá algo bonito pa subirlo a mis historias.']], ['¿Me seguís en Lente?', ['Obvio, ya compartí tu última foto 😎']]],
-  abuela: [['Hola, abuela 💛', ['Hola, mi cielo. Dios me lo acompañe 🙏', 'Abríguese, que en el estadio hace frío de noche.']]],
-  diego: [['Mae, ¿qué tal el ambiente?', ['¡Diay! Desde la tele se ve llenísimo 🔥', 'Qué envidia, mae. Pasame unas fotos.']], ['¿Venís al próximo?', ['Si me conseguís entrada, de una 🎟️😅']]],
-  andy: [['¿Qué contás, Andy?', ['Aquí en la soda viendo el partido. Saludá a la cámara 😂', 'Mae, si sale un golazo me lo mandás YA.']], ['¿Viste la jugada?', ['¡Qué jugadón! ¿Lo agarraste?']]],
-  kendall: [['Kendall, ¿algún consejo?', ['Anticipá, mae. Mirá dónde va a caer el balón, no dónde está.', 'Cuidá la batería y no dispares por disparar.', 'Si cae la luz, subí ISO antes que bajar la velocidad.']]],
-  mariana: [['Gracias por la acreditación', ['¡Con gusto! Cualquier cosa me escribís.']]],
-  editor: [['Ricardo, ¿qué necesitás hoy?', ['Pocas y buenas. Momento, cara y balón.', 'Si hay gol, quiero la celebración de frente.']]],
-};
 const FEED_FANS = ['@lamorada_pura', '@barra_sur_cr', '@futbol_tico', '@pura_liga', '@el_profe_del_futbol', '@mae_futbolero', '@la_gradería', '@cr_deportes'];
 
 export class Phone {
@@ -42,7 +31,7 @@ export class Phone {
     game.events.on('photo:taken', (rec) => this.onPhoto(rec));
   }
   reset() {
-    this.chats = {}; this.options = {}; this.unread = {}; this.typing = {};
+    this.chats = {}; this.options = {}; this.unread = {}; this.typing = {}; this.used = {}; this.chatT = rand(150, 260);
     this.social = { followers: 120, posts: [], feed: [] };
     this.tickets = []; this.guests = []; this.prediction = null; this.lastGoalMsg = -99; this.goodShots = 0; this.eventId = null;
     this.timers = []; this.view = 'home'; this.app = null; this.sel = null; this.fanThanks = 0;
@@ -64,6 +53,19 @@ export class Phone {
   // Retrasos en tiempo real (pausan cuando el juego no está en marcha)
   after(sec, fn) { this.timers.push({ t: sec, fn }); }
   update(dt) {
+    // De vez en cuando alguien te escribe para conversar
+    if (this.game.state === 'play') {
+      this.chatT -= dt;
+      if (this.chatT <= 0) {
+        this.chatT = rand(160, 300);
+        const id = pick(['mama', 'papa', 'vale', 'diego', 'andy', 'abuela', 'diego', 'vale']);
+        const tps = this.topics(id, 2);
+        if (tps.length && !this.options[id] && !this.typing[id]) {
+          const open = { mama: ['¿Cómo vas, mi amor?', '¿Ya comiste?', 'Hola, ¿estás ocupado/a?'], papa: ['¿Qué tal, campeón/a?', '¿Cómo va todo por allá?'], vale: ['Holaaa 👋', 'Ey, ¿qué hacés?', 'Aburrida. Hablame 😩'], diego: ['¡Mae! ¿Qué contás?', 'Diay, ¿cómo va la vara?'], andy: ['Mae 😂', '¿Qué hay, compa?'], abuela: ['Hola mi cielo, ¿cómo está?'] }[id];
+          this.receive(id, pick(open), { options: tps.map((t) => ({ label: t.label, reply: t.reply, next: t.next, onPick: () => (this.used[id] ||= []).push(t.key) })) });
+        }
+      }
+    }
     for (const t of this.timers.slice()) { t.t -= dt; if (t.t <= 0) { this.timers.splice(this.timers.indexOf(t), 1); t.fn(); } }
     // Los likes de las publicaciones crecen con el tiempo
     for (const p of this.social.posts) {
@@ -94,12 +96,16 @@ export class Phone {
     if (opt.reply) { this.typing[id] = true; this.after(rand(1.6, 3.4), () => { this.typing[id] = false; this.receive(id, opt.reply, { options: opt.next }); }); }
     this.render();
   }
-  smalltalk(id) {
-    const pool = SMALLTALK[id]; if (!pool) return null;
-    const [label, replies] = pick(pool); return { label, reply: pick(replies) };
+  // Temas para iniciar conversación: se rotan para no repetir siempre lo mismo
+  topics(id, n = 3) {
+    const all = topicsFor(this, id); if (!all.length) return [];
+    let used = this.used[id] || [];
+    if (all.every((t) => used.includes(t.key))) used = this.used[id] = [];
+    return all.filter((t) => !used.includes(t.key)).slice(0, n);
   }
+  startTopic(id, t) { (this.used[id] ||= []).push(t.key); this.send(id, t); }
   notify(c, text) {
-    const g = this.game; if (!c) return;
+    const g = this.game; if (!c || g.drone?.active || g.ui.screen) return;
     g.audio?.ui('tick'); setTimeout(() => g.audio?.ui('tick'), 140); g.input.rumble(0.15, 0.35, 90);
     const el = h('div', { class: 'phone-notif' }, h('div', { class: 'pn-ic', style: { background: c.color } }, c.emoji), h('div', {}, h('b', {}, c.name), h('div', {}, text.length > 90 ? text.slice(0, 88) + '…' : text)), h('kbd', {}, g.ui.key('phone')));
     const box = this.notifBox || (this.notifBox = h('div', { class: 'phone-notifs' }));
@@ -208,14 +214,22 @@ export class Phone {
     this.el.appendChild(this.frame);
     g.ui.openScreen('phone', this.el);
     g.audio?.ui('click');
-    let acc = 0; this.liveRender = () => { acc++; if (acc % 20 === 0 && this.isOpen() && ['home', 'lente', 'perfil', 'reloj'].includes(this.view)) this.render(); };
+    // Refresco en vivo solo cuando cambia algo visible (hora, mensajes, me gusta); conserva el foco del control
+    let acc = 0; this.liveRender = () => { if (++acc % 20 || !this.isOpen() || !['home', 'lente', 'perfil', 'reloj'].includes(this.view)) return; const sig = this.signature(); if (sig !== this.lastSig) this.render(); };
     g.ui.screenCleanup = () => { this.liveRender = null; };
     this.render();
   }
-  go(view, sel = null) { this.view = view; if (sel !== null) this.sel = sel; this.render(); this.game.audio?.ui('tick'); }
+  go(view, sel = null) { const changed = view !== this.view; this.view = view; if (sel !== null) this.sel = sel; if (changed) this.focusIdx = null; this.render(); this.game.audio?.ui('tick'); }
+  signature() { const g = this.game; return [this.view, Math.floor(g.clock), this.totalUnread, this.social.followers, this.social.posts.reduce((a, p) => a + p.likes + p.comments.length, 0), this.social.feed.length, this.tickets.length].join('|'); }
+  focusables() { return [...this.frame.querySelectorAll('button:not([disabled])')]; }
   render() {
     if (!this.isOpen() || !this.frame) return;
-    const g = this.game, f = this.frame; clear(f);
+    const g = this.game, f = this.frame, ui = g.ui;
+    // Recordar qué botón tenía el foco del control para devolverlo tras redibujar
+    const prev = this.focusables(); const pi = prev.indexOf(ui.navEl); if (pi >= 0) this.focusIdx = pi;
+    const bodyEl = f.querySelector('.ph-body'), scroll = bodyEl ? bodyEl.scrollTop : 0, sameView = this.renderedView === this.view;
+    this.lastSig = this.signature(); this.renderedView = this.view;
+    clear(f);
     const bat = Math.max(9, 96 - Math.floor((g.time || 0) / 90));
     f.append(h('div', { class: 'ph-status' }, h('b', {}, formatClock(g.clock)), h('span', {}, `▂▄▆ 4G · ${bat}%`)));
     const body = h('div', { class: 'ph-body' }); f.append(body);
@@ -250,9 +264,10 @@ export class Phone {
       if (this.typing[c.id]) list.append(h('div', { class: 'bub them typing' }, '• • •'));
       body.append(list);
       const opts = this.options[c.id] || [];
-      const st = this.smalltalk(c.id);
+      const tps = !opts.length && !this.typing[c.id] ? this.topics(c.id) : [];
       body.append(h('div', { class: 'ph-replies' }, opts.map((o) => h('button', { class: 'btn small primary', onclick: () => this.send(c.id, o) }, o.label)),
-        !opts.length && st && !this.typing[c.id] ? h('button', { class: 'btn small', onclick: () => this.send(c.id, st) }, st.label) : null));
+        tps.length ? h('div', { class: 'ph-hint' }, 'Escribir sobre…') : null,
+        tps.map((t) => h('button', { class: 'btn small', onclick: () => this.startTopic(c.id, t) }, t.label))));
       setTimeout(() => { list.scrollTop = list.scrollHeight; }, 0);
     } else if (V === 'lente') {
       this.social.newLikes = false;
@@ -306,6 +321,13 @@ export class Phone {
       } else body.append(h('div', { class: 'muted', style: { padding: '8px' } }, st?.kickedOff ? 'El partido está en juego.' : 'Sin coberturas activas.'));
     }
     f.append(h('div', { class: 'ph-nav' }, h('button', { class: 'btn small', onclick: () => this.go('home') }, '⌂ Inicio'), h('button', { class: 'btn small', onclick: () => g.resume() }, 'Cerrar')));
+    if (sameView) body.scrollTop = scroll;
+    // Foco del control: el mismo botón si seguimos en la misma pantalla; si no, el primero que no sea «Volver»
+    if (g.input.pad) {
+      const items = this.focusables();
+      const t = sameView && this.focusIdx != null && items[this.focusIdx] ? items[this.focusIdx] : items.find((b) => !b.classList.contains('ph-back') && !b.closest('.ph-nav')) || items[0];
+      if (t) { ui.focusNav(t); this.focusIdx = items.indexOf(t); }
+    }
   }
   postCard(p) {
     return h('div', { class: 'ph-post' }, h('div', { class: 'ph-post-h' }, h('span', { class: 'av' }, p.avatar), h('b', {}, p.author)),

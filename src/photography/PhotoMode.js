@@ -78,6 +78,8 @@ export class PhotoMode {
     if (inv.has('monopod') && still && (this.lens.weight > 1 || p.crouch)) r /= Math.pow(2, 2.5);
     if (p.crouch) r *= 0.8;
     if (!still) r *= 3;
+    const b = this.game.buffs || {}, t = this.game.time;
+    if (b.steady > t) r *= 0.72; if (b.tipsy > t) r *= 1.55;
     return r;
   }
   update(dt) {
@@ -192,7 +194,7 @@ export class PhotoMode {
   updateAF(dt) {
     const s = this.s, cam = this.cam, lens = this.lens;
     if (s.af === 'MF') { this.afLocked = false; return; }
-    const speed = 2.5 + 14 * cam.afSpeed * lens.af;
+    const speed = (2.5 + 14 * cam.afSpeed * lens.af) * ((this.game.buffs?.focus || 0) > this.game.time ? 1.2 : 1);
     if (s.af === 'AF-C') {
       let target = null, dist;
       // Seguimiento: si hay un sujeto rastreado y la cámara lo permite, mantenerlo aunque salga del punto AF
@@ -220,8 +222,8 @@ export class PhotoMode {
     if (g.rules && !g.rules.canShoot()) return;
     this.bufferUsed++; inv.drainBattery(1); inv.cardUsed++;
     g.audio?.shutter(this.cam.sound); g.input.rumble(0.05, 0.35, 45);
-    this.kick = ({ basic: 0.0035, sport: 0.0022, pro: 0.0012, flagship: 0.0004 }[this.cam.sound] || 0.002) / (1 + this.lens.weight * 0.5);
-    this.blackout = this.cam.sound === 'flagship' ? 0.02 : this.cam.sound === 'basic' ? 0.09 : 0.05;
+    this.kick = ({ basic: 0.0035, sport: 0.0022, pro: 0.0012, flagship: 0.0004, classic: 0.0045, mirrorless: 0.0002, silent: 0 }[this.cam.sound] || 0.002) / (1 + this.lens.weight * 0.5);
+    this.blackout = { flagship: 0.02, basic: 0.09, classic: 0.12, mirrorless: 0, silent: 0 }[this.cam.sound] ?? 0.05;
     this.capture();
   }
   capture() {

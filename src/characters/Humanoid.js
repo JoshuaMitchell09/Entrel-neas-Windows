@@ -35,6 +35,16 @@ function geos() {
   G.lanyard = new THREE.BoxGeometry(0.06, 0.085, 0.006);
   G.shortsLeg = new THREE.CylinderGeometry(0.09, 0.097, 0.22, 12); G.shortsLeg.translate(0, -0.1, 0);
   G.sleeve = new THREE.CylinderGeometry(0.064, 0.059, 0.13, 12); G.sleeve.translate(0, -0.06, 0);
+  // Rostro y peinados
+  G.eyeW = new THREE.SphereGeometry(0.0165, 8, 6); G.eyeW.scale(1.2, 0.7, 0.42);
+  G.brow = new THREE.BoxGeometry(0.038, 0.008, 0.012);
+  G.mouth = new THREE.BoxGeometry(0.036, 0.007, 0.01);
+  G.lip = new THREE.BoxGeometry(0.032, 0.009, 0.012);
+  G.chin = new THREE.SphereGeometry(0.05, 10, 8); G.chin.scale(1, 0.75, 0.8);
+  G.beard = new THREE.SphereGeometry(0.104, 14, 8, 0, Math.PI, Math.PI * 0.55, Math.PI * 0.4); // solo la mitad delantera (mandíbula)
+  G.curl = new THREE.SphereGeometry(0.034, 7, 5);
+  G.pony = new THREE.CapsuleGeometry(0.032, 0.13, 4, 8);
+  G.collar = new THREE.TorusGeometry(0.062, 0.012, 6, 16); G.collar.rotateX(Math.PI / 2);
   G.ready = true;
   return G;
 }
@@ -56,6 +66,8 @@ export const HAIR_COLORS = ['#1b130e', '#2b1c12', '#3a2817', '#120c08', '#5a3b22
  */
 export const HUMAN_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78, metalness: 0.02 });
 const _c = new THREE.Color();
+// Cejas un poco más oscuras que el pelo (o del color del pelo si ya es muy oscuro)
+function TX_shade(hex) { const c = new THREE.Color(hex); c.multiplyScalar(0.7); return '#' + c.getHexString(); }
 export class Humanoid {
   constructor(o = {}) {
     const g = geos();
@@ -77,22 +89,31 @@ export class Humanoid {
     mk(g.pelvis, legsC || shortsC, this.hips, 0, 0.02, 0, 1.18, 1, 0.82);
     this.spine = P(this.hips, 0, 0.1, 0);
     mk(g.torso, shirtC, this.spine, 0, -0.02, 0, 1.3, 1, 0.74);
+    if (!o.vest) mk(g.collar, o.collar ? col(o.collar) : shirtC, this.spine, 0, 0.47, 0.005, 1.25, 1, 1.1);
     if (o.vest) mk(g.vest, col(o.vest), this.spine, 0, 0.23, 0, 1.33, 1, 0.82);
     if (o.lanyard) mk(g.lanyard, col('#f4f4f4'), this.spine, 0, 0.16, 0.122);
     this.neck = P(this.spine, 0, 0.5, 0);
     mk(g.neck, skin, this.neck, 0, 0.03, 0);
     this.head = P(this.neck, 0, 0.13, 0.01);
     mk(g.head, skin, this.head, 0, 0, 0, 0.93, 1.08, 1);
-    if (!o.bald) mk(g.hair, hairC, this.head, 0, 0.018, -0.008, 0.97, 1.05, 1.03);
-    const eyeC = col('#151010');
-    mk(g.eye, eyeC, this.head, -0.037, 0.018, 0.096); mk(g.eye, eyeC, this.head, 0.037, 0.018, 0.096);
+    // Peinado: corto, rapado, rizado, largo (cola) o calvo; barba en algunos hombres
+    const style = o.bald ? 'bald' : o.hairStyle || (o.female ? 'long' : ['short', 'short', 'buzz', 'curly', 'short', 'fade'][Math.floor(Math.random() * 6)]);
+    if (style === 'short') mk(g.hair, hairC, this.head, 0, 0.018, -0.008, 0.97, 1.05, 1.03);
+    else if (style === 'buzz' || style === 'fade') mk(g.hair, hairC, this.head, 0, style === 'fade' ? 0.03 : 0.012, -0.006, 0.955, style === 'fade' ? 0.95 : 1.0, 1.0);
+    else if (style === 'curly') { mk(g.hair, hairC, this.head, 0, 0.02, -0.008, 1.02, 1.1, 1.06); for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2; mk(g.curl, hairC, this.head, Math.cos(a) * 0.07, 0.075 + (i % 2) * 0.012, Math.sin(a) * 0.065 - 0.01); } }
+    else if (style === 'long') { mk(g.hair, hairC, this.head, 0, 0.012, -0.012, 1.0, 1.08, 1.08); mk(g.pony, hairC, this.head, 0, -0.06, -0.1, 1.0, 1.15, 1.0); mk(g.pony, hairC, this.head, 0, -0.03, -0.075, 2.5, 0.85, 0.9); }
+    if (!o.female && (o.beard ?? Math.random() < 0.28)) mk(g.beard, hairC, this.head, 0, -0.004, 0.0, 1.0, 1.0, 1.06);
+    mk(g.chin, skin, this.head, 0, -0.068, 0.045);
+    const eyeC = col('#151010'), white = col('#d8d0c6'), browC = col(TX_shade(o.hair || '#1b130e')), lipC = col(o.female ? '#a8505a' : '#8a4a3e');
+    for (const ex of [-0.037, 0.037]) { mk(g.eyeW, white, this.head, ex, 0.018, 0.093); mk(g.eye, eyeC, this.head, ex, 0.018, 0.1, 0.62, 0.62, 0.5); mk(g.brow, browC, this.head, ex, 0.044, 0.1); }
+    mk(g.lip, lipC, this.head, 0, -0.043, 0.098); mk(g.mouth, col('#3a1f1a'), this.head, 0, -0.046, 0.101);
     mk(g.nose, skin, this.head, 0, -0.005, 0.11);
     mk(g.ear, skin, this.head, -0.1, 0.0, 0.0); mk(g.ear, skin, this.head, 0.1, 0.0, 0.0);
     if (o.cap) { const cc = col(o.cap); mk(g.cap, cc, this.head, 0, 0.07, 0); mk(g.visor, cc, this.head, 0, 0.045, 0.1); }
     this.arms = [];
     for (const sd of [-1, 1]) {
       const sh = P(this.spine, sd * 0.205, 0.42, 0);
-      mk(g.joint, sleeveC, sh, 0, 0, 0, 0.068, 0.068, 0.068);
+      mk(g.joint, sleeveC, sh, 0, -0.005, 0, 0.06, 0.057, 0.058);
       if (o.armband && sd > 0) mk(g.band, col('#f2c500'), sh, 0, -0.17, 0);
       mk(g.upperArm, o.longSleeves ? sleeveC : skin, sh);
       if (!o.longSleeves) mk(g.sleeve, sleeveC, sh, 0, -0.01, 0);
@@ -158,6 +179,12 @@ export class Humanoid {
     this.lensMesh.scale.set(r / 0.04, r / 0.04, L);
   }
   showCamera(v) { this.cameraRig.visible = v; }
+  // Tamaño y color del cuerpo de cámara (cada modelo se ve distinto)
+  setCameraBody(look) {
+    if (!look) return; const b = this.cameraRig.children[0];
+    b.scale.set(look.size, look.size * (look.grip ? 1.35 : 1), look.size); b.position.y = look.grip ? -0.018 : 0;
+    if (!b.material.userData.own) { b.material = b.material.clone(); b.material.userData.own = true; } b.material.color.set(look.color);
+  }
   blankPose() {
     return { hipY: 0, hipRX: 0, hipRZ: 0, rootRX: 0, rootRZ: 0, spineRX: 0, spineRY: 0, spineRZ: 0, headRX: 0, headRY: 0,
       shL: [0, 0, 0], shR: [0, 0, 0], elL: 0, elR: 0, thL: [0, 0], thR: [0, 0], knL: 0, knR: 0, ftL: 0, ftR: 0 };

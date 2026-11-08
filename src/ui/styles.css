@@ -282,3 +282,24 @@ select, input[type=text] { background: #0e1830; color: var(--text); border: 1px 
 .phone-hud.has { color: var(--text); border: 1px solid rgba(255,59,79,.6); }
 .phone-hud i { font-style: normal; background: #ff3b4f; color: #fff; border-radius: 9px; padding: 0 6px; margin-left: 6px; font-weight: 700; }
 .toast.fan { border-color: #4ea1ff; color: #d8e9ff; font-style: italic; }
+.ph-hint { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 6px 2px 0; }
+
+/* ---------- Modo dron ---------- */
+.drone-ui { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 6; }
+.drone-ui .btn { pointer-events: auto; }
+.dr-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; background: rgba(5,10,20,.7); padding: 8px 12px; border-radius: 10px; align-self: flex-start; }
+.dr-modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.dr-help { font-size: 12px; color: var(--muted); background: rgba(5,10,20,.6); padding: 6px 10px; border-radius: 8px; align-self: flex-start; line-height: 1.5; }
+.dr-rec { color: #ff4d5e; font-weight: 800; letter-spacing: 1px; animation: blink 1s infinite; }
+
+/* ---------- Locales (pulpería, soda, bar) ---------- */
+.shop-panel { width: min(860px, 94vw); max-height: 88vh; overflow: auto; padding: 18px 20px; }
+.shop-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.shop-cash { font-size: 15px; background: rgba(255,255,255,.06); padding: 6px 12px; border-radius: 10px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.shop-item { background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.shop-item .ic { font-size: 30px; }
+.shop-item .nm { font-weight: 700; }
+.shop-item .ds { font-size: 12px; color: var(--muted); flex: 1; }
+.shop-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; font-size: 13px; flex-wrap: wrap; }
+.buffs { font-size: 12px; color: #b9f5c8; text-shadow: 0 1px 4px rgba(0,0,0,.8); }

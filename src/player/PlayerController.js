@@ -32,7 +32,8 @@ export class PlayerController {
     let maxSpeed = slow ? 1.4 : sprint ? 6.4 : 3.6;
     if (this.cameraEquipped && !slow) maxSpeed = 2.8;
     if (this.crouch) maxSpeed = this.inViewfinder ? 0 : 1.2;
-    if (sprint && (mv.x || mv.y)) { this.stamina = Math.max(0, this.stamina - dt * 0.12); if (this.stamina < 0.05) maxSpeed = 3.6; }
+    const energized = (this.game.buffs?.energy || 0) > this.game.time;
+    if (sprint && (mv.x || mv.y)) { this.stamina = Math.max(0, this.stamina - dt * (energized ? 0.05 : 0.12)); if (this.stamina < 0.05) maxSpeed = 3.6; }
     else this.stamina = Math.min(1, this.stamina + dt * 0.2);
     // Dirección relativa a la cámara
     const fwd = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));

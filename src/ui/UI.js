@@ -1,3 +1,4 @@
+import { buffLabels } from '../world/ShopCatalog.js';
 import { h, clear } from './dom.js';
 import { formatClock, formatMoney } from '../core/MathUtil.js';
 import { PARAMS, PARAM_LABELS } from '../photography/PhotoMode.js';
@@ -20,7 +21,7 @@ export class UI {
     const r = this.root;
     this.hud = h('div', { class: 'hud' },
       this.objEl = h('div', { class: 'objective' }, h('div', { class: 'tag' }, 'OBJETIVO'), this.objText = h('div', { class: 'text' }), this.missionsEl = h('div', { class: 'missions-mini' })),
-      h('div', { class: 'topright' }, this.clockEl = h('div', { class: 'clock' }), this.scoreEl = h('div', { class: 'scorebug', style: { display: 'none' } }), this.walletEl = h('div', { class: 'wallet' })),
+      h('div', { class: 'topright' }, this.clockEl = h('div', { class: 'clock' }), this.scoreEl = h('div', { class: 'scorebug', style: { display: 'none' } }), this.walletEl = h('div', { class: 'wallet' }), this.buffEl = h('div', { class: 'buffs' })),
       this.zoneEl = h('div', { class: 'zone' }),
       this.promptEl = h('div', { class: 'prompt' }),
       this.feedEl = h('div', { class: 'feed' }),
@@ -79,10 +80,11 @@ export class UI {
   // ---------- Actualización por frame ----------
   update(dt) {
     const g = this.game;
-    const showHud = !this.screen && g.state === 'play' && !g.photoMode.active && !this.dialogueActive && !g.cinematic;
+    const showHud = !this.screen && g.state === 'play' && !g.photoMode.active && !this.dialogueActive && !g.cinematic && !g.drone?.active;
     this.hud.classList.toggle('hidden', !showHud);
     this.vf.root.classList.toggle('show', g.photoMode.active && !this.screen);
     this.crossEl.style.display = showHud && g.follow.firstPerson ? 'block' : 'none';
+    if (this.phoneTick % 15 === 0) this.buffEl.textContent = buffLabels(g).join('  ·  ');
     if (g.phone && (this.phoneTick = (this.phoneTick || 0) + 1) % 15 === 0) { const n = g.phone.totalUnread; this.phoneEl.innerHTML = `<kbd>${this.key('phone')}</kbd>📱 Teléfono${n ? `<i>${n}</i>` : ''}`; this.phoneEl.classList.toggle('has', n > 0); }
     if (g.settings.data.showFps) this.fpsEl.textContent = `${g.fps.toFixed(0)} FPS · ${g.renderer.info.render.calls} dc`; else this.fpsEl.textContent = '';
     if (g.state !== 'play') return;

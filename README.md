@@ -14,6 +14,9 @@ Esta es la versión de escritorio para **Windows 10/11 (64 bits)**. Tiene todo l
   - Reloj para esperar el partido.
 - **Público más vivo:** te saluda, te pide fotos, posa cuando le apuntás con la cámara y la barra canta.
 - **Puerta de seguridad:** puerta de vidrio transparente y corrediza.
+- **Modo dron / tráiler** (`K`): 7 tomas, cámara lenta y franjas de cine. `R` graba un video con sonido, que queda en `Videos\Entre Lineas`.
+- **Pulpería, soda y bar** con interior: se entra caminando y lo que comprés tiene efecto en el juego.
+- **Más cámaras y lentes**, conversaciones más largas en el teléfono, caras y peinados más realistas, vallas LED y resolución dinámica para mantener los FPS.
 
 ## Descargar el juego (sin programar nada)
 

@@ -3,6 +3,7 @@ import { NPC, LOOKS, randomFan } from '../npc/NPC.js';
 import { formatClock, rand, pick } from '../core/MathUtil.js';
 import { STADIUMS } from '../world/StadiumConfigs.js';
 import { ALL_ITEMS } from '../photography/Equipment.js';
+import { KEEPER_LOOKS, openShopCounter } from '../world/ShopCatalog.js';
 
 const ALVARO_TIPS = [
   'Seguí la jugada, no el balón. Cuando un extremo encara por la banda, ya deberías estar apuntando al área.',
@@ -89,8 +90,16 @@ export class Story {
     stool(st.spots.alvaro);
     for (const p of st.spots.photographers) { if (Math.random() < 0.7) p.userData = 'sit'; }
     for (const p of st.spots.photographers) add(st.group, { name: 'Fotógrafo', look: { ...LOOKS.photog, skin: pick(['#e0ac85', '#c68d63', '#a86f48', '#f1c9a5']), vest: pick(['#0b3d91', '#c8102e', '#2a9d8f']) }, pos: p, yaw: p.x > 0 ? -Math.PI / 2 : Math.PI / 2, idle: p.userData === 'sit' ? (stool(p), 'sit') : 'kneel', camera: pick([300, 400, 600]) });
+    // Locales con interior: dependiente detrás del mostrador y clientes sentados
+    const shopNPCs = [];
+    for (const sh of city.shops || []) {
+      const k = add(city.group, { name: sh.kind === 'bar' ? 'Bartender' : 'Dependiente', role: 'story', look: KEEPER_LOOKS[sh.kind], pos: sh.keeper, yaw: sh.keeperYaw, idle: 'loco', chatty: 0.3 });
+      k.mapLabel = sh.name; shopNPCs.push([sh, k]);
+      for (const seat of sh.seats) if (Math.random() < (sh.kind === 'bar' ? 0.55 : 0.4)) add(city.group, { name: 'Cliente', look: randomFan(Math.random() < 0.6 ? home : away), pos: seat.pos.clone().setY(0), yaw: seat.yaw, idle: seat.bar ? 'loco' : 'sit', chatty: 0.8 });
+    }
     // ---------- Interacciones ----------
     I.clear();
+    for (const [sh, k] of shopNPCs) I.add({ position: sh.counter, radius: 2.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Comprar en ${sh.name}`, onInteract: () => { k.playOnce('talk', 3); g.audio?.talk?.(k.pos.clone().setY(1.6), 1.2, sh.kind === 'bar' ? 0.9 : 1.4); openShopCounter(g, sh); } });
     I.add({ position: this.mariana.pos.clone().setY(1.2).add(new THREE.Vector3(0, 0, 2)), radius: 3.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con Mariana`, onInteract: () => this.talkMariana() });
     I.add({ position: st.spots.guard.clone().setY(1.2), radius: 3.5, prompt: () => this.stage === 'street' || this.stage === 'credential' ? `<kbd>${g.ui.key('interact')}</kbd>Presentarse en seguridad` : null, onInteract: () => this.security() });
     I.add({ getPosition: () => this.alvaro.pos.clone().setY(1), position: this.alvaro.pos, radius: 3, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con Kendall Rojas`, onInteract: () => this.talkAlvaro() });
