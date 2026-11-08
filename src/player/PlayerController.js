@@ -1,0 +1,75 @@
+import * as THREE from 'three';
+import { Humanoid } from '../characters/Humanoid.js';
+import { clamp, damp, dampAngle } from '../core/MathUtil.js';
+
+/*
+ * Controlador en tercera persona del fotógrafo.
+ * Caminar / correr / sprint, salto, agacharse (ángulo bajo), colisiones AABB,
+ * cámara equipada (cambia la animación y la velocidad).
+ */
+export class PlayerController {
+  constructor(game) {
+    this.game = game;
+    this.avatar = new Humanoid({ skin: '#c68d63', shirt: '#2f3e46', shorts: '#2b2b2b', pants: '#3d4a5c', boots: '#5a4636', hair: '#1b130e',
+      backpack: '#22333b', lanyard: true, cap: '#0b3d91', longSleeves: false, height: 1.76 });
+    this.root = this.avatar.root; game.scene.add(this.root);
+    this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3(); this.yaw = 0; this.vy = 0; this.grounded = true;
+    this.radius = 0.32; this.speed = 0; this.crouch = false; this.cameraEquipped = false; this.inViewfinder = false;
+    this.frozen = false; this.stamina = 1; this.stepAcc = 0; this.surface = 'concrete';
+    this.footstepCb = null;
+  }
+  place(x, z, yaw = 0) { this.pos.set(x, 0, z); this.yaw = yaw; this.vel.set(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = yaw; }
+  get forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
+  setCameraEquipped(v) {
+    this.cameraEquipped = v; this.avatar.showCamera(v);
+  }
+  update(dt, input, camYaw, allowMove) {
+    const g = this.game, col = g.collision;
+    let mv = allowMove && !this.frozen ? input.moveVector() : { x: 0, y: 0 };
+    const sprint = input.isDown('sprint') && !this.cameraEquipped;
+    const slow = input.isDown('walk') || this.inViewfinder;
+    if (allowMove && input.wasPressed('crouch')) this.crouch = !this.crouch;
+    let maxSpeed = slow ? 1.4 : sprint ? 6.4 : 3.6;
+    if (this.cameraEquipped && !slow) maxSpeed = 2.8;
+    if (this.crouch) maxSpeed = this.inViewfinder ? 0 : 1.2;
+    if (sprint && (mv.x || mv.y)) { this.stamina = Math.max(0, this.stamina - dt * 0.12); if (this.stamina < 0.05) maxSpeed = 3.6; }
+    else this.stamina = Math.min(1, this.stamina + dt * 0.2);
+    // Dirección relativa a la cámara
+    const fwd = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));
+    const right = new THREE.Vector3(-fwd.z, 0, fwd.x);
+    const wish = new THREE.Vector3().addScaledVector(fwd, mv.y).addScaledVector(right, mv.x);
+    const wl = wish.length();
+    if (wl > 1e-3) wish.multiplyScalar(1 / Math.max(1, wl));
+    const target = wish.clone().multiplyScalar(maxSpeed);
+    const accel = this.grounded ? 10 : 2;
+    this.vel.x = damp(this.vel.x, target.x, accel, dt); this.vel.z = damp(this.vel.z, target.z, accel, dt);
+    // Orientación: hacia el movimiento, o hacia la cámara en el visor
+    if (this.inViewfinder || this.firstPerson) this.yaw = camYaw;
+    else if (wl > 0.05) this.yaw = dampAngle(this.yaw, Math.atan2(wish.x, wish.z), 10, dt);
+    // Salto
+    if (allowMove && this.grounded && input.wasPressed('jump') && !this.inViewfinder && !this.crouch) { this.vy = 4.6; this.grounded = false; }
+    this.vy -= 13 * dt;
+    const next = this.pos.clone(); next.x += this.vel.x * dt; next.z += this.vel.z * dt; next.y += this.vy * dt;
+    col.resolveCircle(next, this.radius, 1.75, 0.36);
+    const gh = col.groundHeight(next.x, next.z, Math.max(next.y, this.pos.y), this.radius, 0.36);
+    if (next.y <= gh) { next.y = gh; this.vy = 0; if (!this.grounded) this.game.audio?.footstep(this.surface, 1.3); this.grounded = true; }
+    else if (next.y > gh + 0.05) this.grounded = false;
+    // Velocidad real (tras colisión)
+    const realV = Math.hypot(next.x - this.pos.x, next.z - this.pos.z) / Math.max(dt, 1e-4);
+    this.speed = damp(this.speed, realV, 12, dt);
+    this.pos.copy(next);
+    this.root.position.copy(this.pos); this.root.rotation.y = this.yaw;
+    // Pasos (audio) sincronizados con la cadencia
+    if (this.grounded && this.speed > 0.4) {
+      this.stepAcc += dt * (this.speed < 2.2 ? 1.8 + this.speed * 0.9 : 2.8 + this.speed * 0.42) * 0.5;
+      if (this.stepAcc >= 0.5) { this.stepAcc -= 0.5; this.game.audio?.footstep(this.surface, clamp(this.speed / 4, 0.4, 1.2)); }
+    }
+    // Animación
+    const av = this.avatar;
+    const st = this.crouch ? 'kneel' : this.inViewfinder ? 'camera' : this.cameraEquipped ? 'cameraLow' : 'loco';
+    if (av.state !== st) av.play(st, 1);
+    av.update(dt, this.crouch ? 0 : this.speed);
+  }
+  get firstPerson() { return this.game.settings.data.view === 'primera'; }
+  eyeHeight() { return this.crouch ? 1.08 : 1.64; }
+}

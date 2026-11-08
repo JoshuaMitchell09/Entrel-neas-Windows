@@ -1,0 +1,24 @@
+SONIDOS PROPIOS PARA "ENTRE LÍNEAS"
+==================================
+
+Poné aquí tus archivos de audio (M4A, MP3, OGG, WAV o MP4) con estos nombres:
+
+  menu.m4a                    -> Música del menú de inicio y de la Redacción
+
+  AMBIENTE POR ESTADIO (cada estadio suena solo con lo suyo, hasta 8 grabaciones):
+  cueva_1.m4a ... cueva_8.m4a       -> Estadio La Cueva (Tibás)
+  alajuela_1.m4a ... alajuela_8.m4a -> Estadio de Alajuela
+  cartago_1.m4a ... cartago_8.m4a   -> Estadio de Cartago
+  irazu_1.m4a ... irazu_8.m4a       -> Metropolitano Irazú
+
+  AMBIENTE GENERAL (suena en los estadios que no tengan audio propio):
+  estadio_1.m4a ... estadio_8.m4a
+
+Las grabaciones se reproducen en orden aleatorio con fundido cruzado y el
+volumen se iguala solo.
+
+Usá solamente audio propio o que tengas permiso de usar.
+Estos archivos NO se suben a GitHub (están en .gitignore).
+
+Alternativa: dentro del juego, Ajustes -> Audio -> "Tus sonidos": cada estadio
+tiene su botón "Agregar…" (podés elegir varios archivos a la vez).

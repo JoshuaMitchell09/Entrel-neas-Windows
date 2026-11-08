@@ -1,0 +1,53 @@
+{
+  "name": "entre-lineas-windows",
+  "productName": "Entre Lineas",
+  "version": "0.6.0",
+  "description": "ENTRE LÍNEAS: Fotógrafo de la Liga Tica — versión para Windows",
+  "author": "Josué Navarro",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "app": "vite build && electron .",
+    "dist:win": "vite build && electron-builder --win --x64",
+    "dist:dir": "vite build && electron-builder --win --x64 --dir"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8",
+    "vite": "5.4.11"
+  },
+  "build": {
+    "appId": "com.entrelineas.juego",
+    "productName": "Entre Lineas",
+    "copyright": "Entre Lineas",
+    "directories": { "output": "release", "buildResources": "assets" },
+    "files": ["dist/**/*", "!dist/audio/*.{m4a,mp3,ogg,wav,mp4,webm}", "electron/**/*", "assets/icon.png", "package.json"],
+    "extraFiles": [
+      { "from": "public/audio/LEEME.txt", "to": "audio/LEEME.txt" },
+      { "from": "LEEME-WINDOWS.txt", "to": "LEEME.txt" }
+    ],
+    "asar": true,
+    "win": {
+      "icon": "assets/icon.ico",
+      "executableName": "EntreLineas",
+      "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "zip", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Entre Lineas",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "artifactName": "EntreLineas-Instalador-${version}.exe",
+      "language": "3082"
+    },
+    "artifactName": "EntreLineas-${version}-Windows-x64.${ext}"
+  }
+}

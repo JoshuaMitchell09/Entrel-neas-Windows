@@ -1,0 +1,6 @@
+node_modules/
+dist/
+release/
+*.log
+public/audio/*
+!public/audio/LEEME.txt
