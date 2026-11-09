@@ -27,10 +27,10 @@ export const STADIUMS = {
 // butacas moradas con pasillos amarillos y fachada granate con letras gigantes.
 STADIUMS.cueva = {
   id: 'cueva', name: 'Estadio La Cueva', city: 'Tibás', capacity: 23000, tier: 1,
-  nearRows: 26, endRows: 14, farRows: 28, rowDepth: 0.74, rowHeight: 0.5,
+  nearRows: 31, endRows: 17, farRows: 33, rowDepth: 0.74, rowHeight: 0.5,
   roof: 'sides', corners: false, lights: 'roof', crowdDensity: 0.92,
   seatColors: ['#4a2370', '#6e6a78'], aisleColor: '#f2b705', aisleEvery: 9,
-  tiers: { near: { row: 13, rise: 2.2 }, far: { row: 14, rise: 2.6 } },
+  tiers: { near: { row: 15, rise: 2.4 }, far: { row: 16, rise: 2.8 } },
   banners: { near: ['ASCENSO TOTAL · LA CASA DEL FÚTBOL TICO', 'JUNTOS SOMOS MÁS FUERTES', 'ASCENSO TOTAL'], far: ['LA VIDA POR LOS COLORES', 'ASCENSO TOTAL · FOTO Y VIDEO', 'AQUÍ SE VIVE EL FÚTBOL'] },
   facade: '#5c1a33', facadeBand: '#6d1f3a', facadeLetters: ['L', 'A', '★', 'C', 'U', 'E', 'V', 'A'],
   hasBarra: true, tifo: 'La Cueva nunca duerme',
@@ -42,10 +42,10 @@ STADIUMS.cueva = {
 // fachada negra con letrero y bajos rojos con volúmenes curvos de ladrillo.
 STADIUMS.alajuela = {
   id: 'alajuela', name: 'Estadio de Alajuela', city: 'Alajuela', capacity: 17800, tier: 2,
-  nearRows: 22, endRows: 14, eastRows: 22, westRows: 12, farRows: 24, rowDepth: 0.76, rowHeight: 0.5,
+  nearRows: 26, endRows: 16, eastRows: 27, westRows: 14, farRows: 29, rowDepth: 0.76, rowHeight: 0.5,
   roof: 'main', corners: false, lights: 'towers', towerStyle: 'striped', crowdDensity: 0.9,
   seatColors: ['#c8102e', '#1a1a1a'], seatPattern: 'blocks', aisleColor: '#f2b705', aisleEvery: 7,
-  tiers: { east: { row: 11, rise: 2.2 } },
+  tiers: { east: { row: 13, rise: 2.4 } },
   banners: { east: ['ASCENSO TOTAL', 'ROJINEGROS DE CORAZÓN', 'ASCENSO TOTAL'] },
   roofSpec: {
     near: { color: '#b3202c', solar: true, fascia: 'ASCENSO TOTAL · TRIBUNA PRINCIPAL', backText: 'ESTADIO DE ALAJUELA', fasciaColor: '#141414' },
@@ -60,7 +60,7 @@ STADIUMS.alajuela = {
 // y borde rojo, graderías laterales y cabeceras bajas abiertas, torres de luz de celosía.
 STADIUMS.cartago = {
   id: 'cartago', name: 'Estadio de Cartago', city: 'Cartago', capacity: 13500, tier: 1,
-  nearRows: 24, endRows: 10, eastRows: 12, westRows: 9, farRows: 16, rowDepth: 0.78, rowHeight: 0.46,
+  nearRows: 28, endRows: 12, eastRows: 15, westRows: 11, farRows: 20, rowDepth: 0.78, rowHeight: 0.46,
   roof: 'main', corners: false, lights: 'towers', towerStyle: 'lattice', crowdDensity: 0.82,
   seatColors: ['#1d4fd1', '#173fa6'], seatPattern: 'solid', aisleColor: '#f6c400', aisleEvery: 8,
   roofSpec: { near: { color: '#c9ced3', beam: '#1b2f7a', edge: '#c8102e', beamStep: 8 } },

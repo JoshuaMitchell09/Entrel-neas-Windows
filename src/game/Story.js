@@ -61,6 +61,7 @@ export class Story {
     this.mariana.mapLabel = 'Mariana (acreditaciones)';
     this.guard = add(st.group, { name: 'Oficial Brenes', role: 'story', look: LOOKS.guard, pos: st.spots.guard, yaw: 0, idle: 'loco' });
     this.guard.mapLabel = 'Seguridad';
+    if (city.spots.boothGuard) add(city.group, { name: 'Guarda del parqueo', look: LOOKS.guard, pos: city.spots.boothGuard, yaw: Math.PI, idle: 'loco', chatty: 0.3 }).mapLabel = 'Parqueo de prensa';
     this.alvaro = add(st.group, { name: 'Kendall Rojas', role: 'story', look: LOOKS.alvaro, pos: st.spots.alvaro, yaw: -Math.PI / 2, idle: 'sit', camera: 400 });
     this.alvaro.mapLabel = 'Kendall Rojas';
     g.storyNPCs = [this.mariana, this.guard, this.alvaro];
@@ -118,7 +119,26 @@ export class Story {
       if (!g.inventory.credential) { g.ui.toast('Acceso restringido: se requiere acreditación de prensa.', 'warn'); g.audio?.ui('error'); return; }
       st.pressDoor.open(); g.audio?.ui('door'); g.ui.toast('Tu acreditación abre la sala de prensa.', 'good');
     } });
-    for (const d of st.lockerDoors) I.add({ position: d.center, radius: 2.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>${d.label}`, onInteract: () => { g.audio?.ui('error'); g.ui.toast(`${d.label}: acceso exclusivo para jugadores y cuerpo técnico. Tu acreditación (Foto · Campo) no incluye esta zona.`, 'warn', 4000); } });
+    // Vestuarios: solo el fotógrafo oficial del club entra (al vestuario de su equipo)
+    st.lockerDoors.forEach((d, i) => I.add({ position: d.center, radius: 2.2, prompt: () => (d.isOpen ? null : `<kbd>${g.ui.key('interact')}</kbd>${d.label}`), onInteract: () => {
+      const offTeam = ev.official, mine = offTeam && ((i === 0 && offTeam === ev.home) || (i === 1 && offTeam === ev.away));
+      if (mine && g.inventory.credential?.official) { d.open(); g.audio?.ui('door'); g.ui.toast(`Fotógrafo oficial de ${g.teamName(offTeam)}: entrás al vestuario. ¡Fotografiá las camisetas, la pizarra y la previa!`, 'good', 4500); g.events.emit('story:locker'); return; }
+      g.audio?.ui('error'); g.ui.toast(`${d.label}: acceso exclusivo para jugadores y cuerpo técnico.${offTeam ? ' Tu acceso es solo al vestuario de tu club.' : ' Tu acreditación (Foto · Campo) no incluye esta zona.'}`, 'warn', 4000);
+    } }));
+    // Palco VIP (escaleras desde el pasillo)
+    if (st.palco) {
+      I.add({ position: st.palco.stairs.clone().setY(1), radius: 1.8, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Subir al palco VIP`, onInteract: async () => {
+        if (!ev.official) { g.audio?.ui('error'); g.ui.toast('Palco VIP: solo invitados y personal del club.', 'warn', 3000); return; }
+        await g.ui.fade(true); const s = st.palco.spot; g.player.place(s.x, s.z, Math.PI); g.player.pos.y = st.palco.deck + 0.02; g.player.root.position.copy(g.player.pos); g.follow.yaw = Math.PI; g.follow.snap(g.player); await g.ui.fade(false);
+        g.ui.toast('🥂 Palco VIP: la mejor vista del estadio. Fotografiá el panorama, la afición y a los invitados.', 'good', 4000); g.events.emit('story:palco');
+      } });
+      I.add({ getPosition: () => st.palco.spot.clone().setY(st.palco.deck + 1), position: st.palco.spot, radius: 2.2, prompt: () => (g.player.pos.y > 3 ? `<kbd>${g.ui.key('interact')}</kbd>Bajar al pasillo` : null), onInteract: async () => {
+        await g.ui.fade(true); const s = st.palco.stairs; g.player.place(s.x, s.z + 0.6, 0); g.follow.yaw = 0; g.follow.snap(g.player); await g.ui.fade(false);
+      } });
+      if (ev.official) for (const seat of st.palco.seats) if (Math.random() < 0.7) add(st.group, { name: 'Invitado VIP', look: { ...randomFan(home), shirt: pick(['#ffffff', '#1d3557', home.colors.primary]), pants: '#2b2b38' }, pos: seat.clone(), yaw: Math.PI, idle: 'sit', chatty: 0.4 });
+    }
+    // Utileros en el vestuario del club (solo modo fotógrafo oficial)
+    if (ev.official && st.lockerRooms) { const L = st.lockerRooms[ev.official === ev.home ? 0 : 1]; for (const [dx, idle] of [[-1.5, 'talk'], [1.6, 'clipboard']]) add(st.group, { name: 'Utilero', look: { ...LOOKS.steward, shirt: g.team(ev.official).colors.primary, vest: null }, pos: L.center.clone().add(new THREE.Vector3(dx, 0, 0.4)), yaw: Math.PI, idle, chatty: 0.6 }); }
     for (const lp of st.pressLaptops) I.add({ position: lp, radius: 1.6, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>${this.stage === 'post' ? 'Entregar fotografías al editor' : 'Usar laptop de prensa'}`, onInteract: () => this.laptop() });
     for (const v of city.vendorSpots) I.add({ position: v.pos.clone().setY(1), radius: 2.5, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Comprar en «${v.name}» (₡1 000)`, onInteract: () => {
       if (g.career.money < 1000) { g.ui.toast('No te alcanza.', 'warn'); return; }
@@ -167,7 +187,15 @@ export class Story {
       return;
     }
     const st = STADIUMS[ev.stadium];
-    const lines = this.intro ? [
+    const lines = ev.official ? [
+      { ...M, text: `¡${g.playerName}! El club me avisó: hoy sos el fotógrafo oficial de ${g.teamName(ev.official)} porque su fotógrafo se enfermó.` },
+      { ...M, text: 'Esta acreditación es de personal del club: ACCESO TOTAL. Podés entrar al vestuario de tu equipo, al palco VIP (escaleras en el pasillo) y moverte por todo el estadio.' },
+      { ...M, text: 'Eso sí: la cancha sigue prohibida mientras ruede la pelota. Y el club quiere fotos de la previa en el vestuario. ¡Suerte!', options: [{ label: '¡Gracias, Mariana!', value: 1 }] },
+    ] : ev.cup ? [
+      { ...M, text: `¡${g.playerName}! Hoy es noche de Copa Centroamericana: ${g.teamName(ev.home)} contra ${g.teamName(ev.away)}. La organización internacional emite su propia acreditación.` },
+      { ...M, text: 'Aquí está: es la especial de la copa, con tu número y el holograma verde. El chaleco verde de prensa es obligatorio en el campo. No la perdás.' },
+      { ...M, text: `El encargo del editor: «${ev.assignment.title}». Hay más cámaras y más seguridad que en la liga: respetá las zonas.`, options: [{ label: '¡Gracias, Mariana!', value: 1 }] },
+    ] : this.intro ? [
       { ...M, text: `¡Hola! Vos debés ser ${g.playerName}, ${g.female ? 'la nueva colaboradora' : 'el nuevo colaborador'} de Ascenso Total. Soy Mariana Quesada, coordinadora de prensa de la Liga.` },
       { ...M, text: 'Dejame verificar en la lista… aquí estás. Esta es tu acreditación: es personal e intransferible.' },
       { ...M, text: 'Te da acceso al túnel, a la sala de prensa y a las zonas de fotógrafos pintadas en azul detrás de las porterías.' },
@@ -179,7 +207,7 @@ export class Story {
     ];
     await g.ui.dialogue(lines);
     const d = new Date();
-    inv.credential = { eventId: ev.id, event: `${ev.title} · ${g.team(ev.home).short} vs ${g.team(ev.away).short}`, home: ev.home, away: ev.away, stadium: st.name, date: d.toLocaleDateString('es-CR') + ' · ' + formatClock(ev.kickoff), number: `LT-26-${String(Math.floor(Math.random() * 9000) + 1000)}` };
+    inv.credential = { eventId: ev.id, cup: !!ev.cup && !ev.official, official: ev.official || null, seat: 10 + Math.floor(Math.random() * 80), event: `${ev.title} · ${g.team(ev.home).short} vs ${g.team(ev.away).short}`, home: ev.home, away: ev.away, stadium: st.name, date: d.toLocaleDateString('es-CR') + ' · ' + formatClock(ev.kickoff), number: `LT-26-${String(Math.floor(Math.random() * 9000) + 1000)}` };
     if (!inv.owned.credential) inv.owned.credential = 1;
     g.audio?.ui('mission');
     g.screens.credential(() => {
@@ -299,6 +327,7 @@ export class Story {
       this.stage = 'briefed'; this.briefed = true; this.setObjective(); g.events.emit('story:alvaro');
       if (this.intro) g.missions.add('m_calentamiento');
       for (const id of this.ev.missions) if (id !== 'm_entrega' && id !== 'm_calentamiento') g.missions.add(id);
+      if (this.ev.official) { g.missions.add('m_vestuario'); g.missions.add('m_palco'); }
       if (first) setTimeout(() => g.ui.hint('Modo fotografía', `<kbd>${g.ui.key('equip')}</kbd>equipar cámara<br><kbd>Clic der.</kbd>visor · <kbd>Clic</kbd>disparar · <kbd>Rueda</kbd>zoom<br><kbd>${g.ui.key('paramPrev')}</kbd>/<kbd>${g.ui.key('paramNext')}</kbd> parámetro · <kbd>${g.ui.key('paramDec')}</kbd>/<kbd>${g.ui.key('paramInc')}</kbd> valor<br><kbd>${g.ui.key('autofocus')}</kbd>autofoco · <kbd>${g.ui.key('driveMode')}</kbd>ráfaga · <kbd>${g.ui.key('crouch')}</kbd>arrodillarse<br><kbd>${g.ui.key('gallery')}</kbd>galería · <kbd>T</kbd>esperar el saque`, 20000), 400);
       return;
     }

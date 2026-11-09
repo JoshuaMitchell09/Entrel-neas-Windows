@@ -31,6 +31,7 @@ export const EVENT_INFO = {
   formacion: { label: 'Foto oficial del equipo', weight: 64, sigma: 5, window: 12 },
   sorteo: { label: 'Sorteo de la moneda', weight: 70, sigma: 0.9, window: 3 },
   trifulca: { label: 'Trifulca entre jugadores', weight: 82, sigma: 1.6, window: 5 },
+  fueradejuego: { label: 'Fuera de juego', weight: 58, sigma: 0.8, window: 2.5 },
   entrevista: { label: 'Entrevista al jugador del partido', weight: 72, sigma: 6, window: 14 },
 };
 // Formación 4-4-2 en marco de ataque: x de -1 (propia portería) a 1 (rival); z de -1 a 1.
@@ -62,6 +63,15 @@ export class Match {
     this.ars = [{ h: mk('#f2e600'), pos: new THREE.Vector3(20, 0, -HW - 0.8), vel: new THREE.Vector3(), yaw: 0, kind: 'referee', side: 1, name: 'Asistente' },
       { h: mk('#f2e600'), pos: new THREE.Vector3(-20, 0, HW + 0.8), vel: new THREE.Vector3(), yaw: Math.PI, kind: 'referee', side: -1, name: 'Asistente' }];
     for (const o of [this.ref, ...this.ars]) { this.scene.add(o.h.root); o.h.root.position.copy(o.pos); }
+    // Banderines de los asistentes (cuadros rojos y amarillos)
+    const fc = document.createElement('canvas'); fc.width = fc.height = 32; const fx = fc.getContext('2d');
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { fx.fillStyle = (i + j) % 2 ? '#ffd400' : '#e01b24'; fx.fillRect(i * 8, j * 8, 8, 8); }
+    const ft = new THREE.CanvasTexture(fc); ft.colorSpace = THREE.SRGBColorSpace;
+    for (const a of this.ars) {
+      const g2 = new THREE.Group(); const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.55, 6), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+      stick.position.y = -0.2; g2.add(stick); const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.24), new THREE.MeshStandardMaterial({ map: ft, side: THREE.DoubleSide, roughness: 0.8 }));
+      flag.position.set(0.16, -0.38, 0); g2.add(flag); g2.position.set(0, -0.3, 0.02); a.h.arms[1].el.add(g2); a.flag = g2;
+    }
     this.ref.card = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.105), new THREE.MeshStandardMaterial({ color: 0xffd400, side: THREE.DoubleSide, roughness: 0.4 }));
     this.ref.card.position.set(0, -0.33, 0.035); this.ref.card.visible = false; this.ref.h.arms[1].el.add(this.ref.card);
     this.coin = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.006, 24), [new THREE.MeshStandardMaterial({ color: 0xb08d57, metalness: 0.9, roughness: 0.3 }), new THREE.MeshStandardMaterial({ color: 0xe6c35c, metalness: 1, roughness: 0.25 }), new THREE.MeshStandardMaterial({ color: 0xc0c4c8, metalness: 1, roughness: 0.25 })]);
@@ -246,7 +256,7 @@ export class Match {
       case 'warmup': this.updateWarmup(dt); break;
       case 'walkout': this.updateWalkout(dt); break;
       case 'tunnel': case 'lineup': case 'teamphoto': case 'toss': this.updateCeremony(dt); break;
-      case 'play': this.updatePlay(dt); this.advanceClock(dt); break;
+      case 'play': this.updatePlay(dt); this.advanceClock(dt); if (this.pendingOffside) { this.pendingOffside.t -= dt; if (this.pendingOffside.t <= 0) { const o = this.pendingOffside; this.pendingOffside = null; if (this.phase === 'play') this.callOffside(o); } } break;
       case 'restart': this.updateRestart(dt); this.advanceClock(dt * 0.5); break;
       case 'goal': this.updateGoal(dt); break;
       case 'halftime': this.updateBreak(dt); break;
@@ -257,6 +267,7 @@ export class Match {
     if (this.phase === 'play' || this.phase === 'goal') this.checkBall();
     for (const p of this.all) {
       if (p.sentOff && p.mode !== 'leaving') continue;
+      if (p.runAhead) { const r = p.runAhead; r.t -= dt; p.pos.x += r.d * r.speed * dt; p.vel.x = r.d * r.speed; if (r.t <= 0) p.runAhead = null; }
       if (p.mode === 'fallen') { p.vel.multiplyScalar(Math.pow(0.04, dt)); p.fallenT -= dt; if (p.fallenT <= 0) { p.mode = 'play'; p.playAnim('getup', 0.9); } }
       p.integrate(dt);
       p.sync(dt, this.ball.pos);
@@ -362,6 +373,8 @@ export class Match {
     else shift -= 0.08;
     if (p.role === 'GK') { fx = -0.97; shift = 0; }
     let x = clamp(fx + shift, -0.97, p.role === 'DEF' ? 0.45 : 0.92);
+    // Línea defensiva: sin el balón, los defensas sostienen la línea (~20 m del arco) y solo se hunden si el balón entra al último cuarto
+    if (!poss && p.role === 'DEF') x = Math.max(x, -bxf > 0.62 ? -0.88 : -0.62);
     let z = fz * 0.88 + (b.z / HW) * (p.role === 'GK' ? 0.0 : 0.28);
     // Desmarques al área cuando el equipo ataca en el último tercio
     if (poss && bxf > 0.45 && p.role === 'FWD') { x = 0.82 + (p.number % 3) * 0.03; z = (fz > 0 ? 0.1 : -0.12) + Math.sin(this.time * 0.7 + p.number) * 0.08; }
@@ -500,8 +513,43 @@ export class Match {
       this.game.events.emit('match:shot', { team: p.team });
     } else if (k.kind === 'pass' || k.kind === 'cross' || k.kind === 'clear') {
       if (k.kind !== 'clear' && Math.random() < 0.5) this.logEvent('pase', [p, k.extra.target].filter(Boolean), p.pos, { team: p.team });
+      // Fuera de juego: se juzga en el momento del pase (no en saques de banda, esquina ni de meta)
+      const recv = k.extra.target;
+      if (recv && this.phase === 'play' && this.time - (this.restartExecAt ?? -9) > 0.6 && this.time - (this.lastOffside ?? -99) > 20) {
+        let m = this.offsideMargin(p, recv);
+        // El delantero a veces arranca antes de tiempo: si está cerca de la línea, queda adelantado al salir el pase
+        const raw = this.lineGap(p, recv);
+        if (m <= 0 && recv.role === 'FWD' && raw > -5.5 && raw < 0.3 && Math.random() < 0.45) {
+          // Arranque en carrera antes de tiempo: en ~0,6 s cruza la línea (se ve en la cancha)
+          const push = -raw + rand(0.6, 1.4); recv.runAhead = { t: 0.6, speed: push / 0.6, d: this.dir(p.team) };
+          this.pendingOffside = { t: 0.62, recv, team: p.team, early: true };
+        } else if (m > 0.3 && Math.random() < (m > 1 ? 0.93 : 0.75)) this.pendingOffside = { t: 0.55, recv, spot: recv.pos.clone(), team: p.team };
+      }
       if (k.kind === 'cross') { this.excite = Math.max(this.excite, 0.45); b.cross = true; }
     } else if (k.kind === 'corner') { this.logEvent('corner', [p], p.pos, { team: p.team }); b.cross = true; }
+  }
+  // Distancia (m) que el receptor está adelantado respecto al penúltimo defensor y al balón (0 si está habilitado)
+  offsideMargin(passer, recv) {
+    const d = this.dir(passer.team), rx = recv.pos.x * d, bx = this.ball.pos.x * d;
+    if (rx <= 0 || rx <= bx) return 0;
+    const defs = this.active(1 - passer.team).map((q) => q.pos.x * d).sort((a, b) => b - a);
+    return Math.max(0, rx - Math.max(defs[1] ?? HL, bx));
+  }
+  // Distancia con signo entre el receptor y la línea (penúltimo defensor o balón): >0 adelantado
+  lineGap(passer, recv) {
+    const d = this.dir(passer.team), rx = recv.pos.x * d, bx = this.ball.pos.x * d;
+    if (rx <= 0) return -99;
+    const defs = this.active(1 - passer.team).map((q) => q.pos.x * d).sort((a, b) => b - a);
+    return rx - Math.max(defs[1] ?? HL, bx);
+  }
+  callOffside(o) {
+    const recv = o.recv, ar = recv.pos.x > 0 ? this.ars[0] : this.ars[1];
+    if (!o.spot) o.spot = recv.pos.clone();
+    this.lastOffside = this.time; this.whistle(1);
+    ar.h.play('flagUp', 2.6); ar.flagT = 2.6;
+    this.logEvent('fueradejuego', [recv, ar], recv.pos, { team: o.team, peak: this.time + 0.3 });
+    this.addFeed(`¡Bandera arriba! Fuera de juego de ${recv.name} (#${recv.number}).`);
+    this.setRestart('free', 1 - o.team, o.spot, 2.4);
   }
   passVelocity(from, to, lofted) {
     const d = new THREE.Vector3(to.x - from.x, 0, to.z - from.z); const dist = d.length(); d.normalize();
@@ -866,7 +914,7 @@ export class Match {
     if (r.t < r.wait || tk.pos.distanceTo(sp) > 1.0) { if (r.t > r.wait + 8) tk.pos.copy(sp); return; }
     // Ejecutar
     for (const p of this.all) p.cornerSpot = null;
-    this.phase = 'play'; this.lastRestartType = r.type; this.restart = null; b.dead = false; b.owner = tk; b.lastTouch = r.team;
+    this.phase = 'play'; this.lastRestartType = r.type; this.restart = null; this.restartExecAt = this.time; this.pendingOffside = null; b.dead = false; b.owner = tk; b.lastTouch = r.team;
     if (r.type === 'kickoff') {
       this.whistle(1);
       if (this.minute < 1 && this.half === 1) this.logEvent('saque', [tk], tk.pos, { team: r.team });
@@ -930,6 +978,7 @@ export class Match {
       const dd = ax - a.pos.x; a.vel.set(Math.sign(dd) * Math.min(5, Math.abs(dd)), 0, 0);
       a.pos.addScaledVector(a.vel, dt);
       a.yaw = dampAngle(a.yaw, a.side > 0 ? 0 : Math.PI, 5, dt);
+      if (a.flagT > 0) { a.flagT -= dt; a.vel.set(0, 0, 0); a.yaw = dampAngle(a.yaw, a.side > 0 ? Math.PI / 2 * 0 : Math.PI, 5, dt); }
       a.h.root.position.copy(a.pos); a.h.root.rotation.y = a.yaw; a.h.update(dt, a.vel.length());
     }
   }

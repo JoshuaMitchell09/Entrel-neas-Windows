@@ -374,6 +374,10 @@ export class Humanoid {
         p.shL = [-1.15 + w, 0.25, -0.15]; p.elL = -1.25;
         break;
       }
+      case 'flagUp': { // Asistente con la bandera en alto (fuera de juego)
+        loco(); p.shR = [-3.0, 0, 0.12]; p.elR = 0; p.shL = [-0.1, 0, -0.1]; p.elL = -0.2; p.headRY = 0.2;
+        break;
+      }
       case 'protest': { // Reclamar al árbitro
         loco(); const w = Math.sin(this.breath * 3);
         p.shL = [-1.0 + w * 0.25, 0, -0.6]; p.shR = [-1.0 - w * 0.25, 0, 0.6]; p.elL = p.elR = -1.3; p.headRX = -0.15;

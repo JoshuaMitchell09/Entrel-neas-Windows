@@ -25,7 +25,7 @@ export class City {
     this.rnd = seededRandom(42);
     this.cars = []; this.spots = {}; this.lamps = []; this.vendorSpots = []; this.shops = [];
     this.night = game.env.time === 'night';
-    this.buildGround(); this.buildStreet(); this.buildBuildings(); buildAvenue(this); this.buildPlaza(); this.buildProps(); this.buildCars(); this.bounds();
+    this.buildGround(); this.buildStreet(); this.buildBuildings(); buildAvenue(this); this.buildPlaza(); this.buildParking(); this.buildProps(); this.buildCars(); this.bounds();
     // Luz compartida de interiores (se crea desde el inicio para no recompilar materiales al entrar)
     if (this.shops.length) { this.shopLight = new THREE.PointLight(0xfff0d8, 0, 13, 1.4); this.group.add(this.shopLight); }
     for (const c of this.cars) c.obj.userData.noMerge = true;
@@ -128,7 +128,8 @@ export class City {
     const wallM = new THREE.MeshStandardMaterial({ map: TX.paintedWallTexture('#d9d2c3', 77), roughness: 0.9 });
     for (const s of [-1, 1]) { this.box(0.4, 2.4, P - gz - 12, wallM, s * 62, 1.2, gz + (P - gz - 12) / 2); this.col.addCentered(s * 62, gz + (P - gz - 12) / 2, 0.4, P - gz - 12, 2.4); }
     // Puesto de acreditaciones de prensa (Mariana)
-    const tx = -24, tz = P - 12;
+    // El toldo de acreditaciones está dentro del parqueo de prensa (lado este de la plaza)
+    const tx = 27.5, tz = gz + 19.5;
     const canopy = new THREE.MeshStandardMaterial({ map: TX.fabricTexture('#0b3d91', '#1356c4'), roughness: 0.8, side: THREE.DoubleSide });
     const roof = new THREE.Mesh(new THREE.ConeGeometry(4.6, 1.4, 4, 1, true), canopy); roof.rotation.y = Math.PI / 4; roof.position.set(tx, 3.4, tz); roof.castShadow = true; this.group.add(roof);
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) this.box(0.08, 2.7, 0.08, stdMat('#dddddd', 0.4, 0.7), tx + sx * 3.1, 1.35, tz + sz * 3.1);
@@ -153,7 +154,7 @@ export class City {
     }
     // Carretas de vendedores (con sombrilla)
     const vendors = [['COPOS', '#e63946'], ['GRANIZADOS', '#2a9d8f'], ['GORRAS Y CAMISETAS', '#f4a261'], ['CHICHARRONES', '#bc6c25'], ['MANÍ Y CONFITES', '#6d597a']];
-    const vpos = [[-44, P - 5], [-8, P - 6], [12, gz + 18], [-40, gz + 14], [44, P - 8]];
+    const vpos = [[-44, P - 5], [-8, P - 6], [12, gz + 18], [-40, gz + 14], [-24, P - 10]];
     vendors.forEach(([name, color], i) => {
       const [x, z] = vpos[i];
       const cart = new THREE.Group(); cart.position.set(x, 0, z); this.group.add(cart);
@@ -166,6 +167,43 @@ export class City {
       this.vendorSpots.push({ pos: new THREE.Vector3(x, 0, z - 1.0), name, rot: 0 });
     });
     this.spots.plazaCenter = new THREE.Vector3(0, 0, (gz + P) / 2);
+  }
+  // Parqueo de prensa con aguja (barrera) y caseta del guarda. Adentro se recoge la acreditación.
+  buildParking() {
+    const gz = this.gz, P = this.P, x0 = 21, x1 = 61.5, z0 = gz + 8.6, z1 = P - 0.6;
+    const asphalt = new THREE.MeshStandardMaterial({ map: TX.asphaltTexture([8, 5]), roughness: 0.85 });
+    this.plane(x1 - x0, z1 - z0, asphalt, (x0 + x1) / 2, 0.008, (z0 + z1) / 2);
+    const paint = new THREE.MeshBasicMaterial({ color: 0xf2f2f2 }), yellow = new THREE.MeshBasicMaterial({ color: 0xf2c500 });
+    // Cajones (dos filas) con "PRENSA" pintado
+    const stalls = [];
+    for (const [rz, dir] of [[z0 + 2.6, 1], [z1 - 2.8, -1]]) for (let x = 32; x <= (dir < 0 ? 49.5 : 58); x += 2.9) { // la fila de la calle deja libre la entrada
+      this.plane(0.1, 5, paint, x - 1.45, 0.012, rz); stalls.push({ x, z: rz, dir });
+      const t = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.55), new THREE.MeshBasicMaterial({ map: TX.signTexture('PRENSA', '#00000000', '#f2c500', 256, 64, 'bold 44px Arial'), transparent: true }));
+      t.rotation.x = -Math.PI / 2; t.rotation.z = dir > 0 ? 0 : Math.PI; t.position.set(x, 0.014, rz + dir * 1.6); this.group.add(t);
+    }
+    // Carros de otros fotógrafos parqueados
+    this.parkStalls = stalls;
+    stalls.forEach((s, i) => { if (i % 3 === 1 || i % 5 === 0) return; const c = this.makeCar(CAR_COLORS[(i * 3) % CAR_COLORS.length]); c.position.set(s.x, 0, s.z); c.rotation.y = s.dir > 0 ? -Math.PI / 2 : Math.PI / 2; this.col.addCentered(s.x, s.z, 1.9, 4.3, 1.5); s.taken = true; });
+    // Malla perimetral del lado de la calle, con la entrada de carros (x 52..58) y portón peatonal (x 48..50.5)
+    const fenceM = new THREE.MeshStandardMaterial({ color: 0x8a9099, metalness: 0.6, roughness: 0.4, transparent: true, opacity: 0.55 });
+    for (const [a, b] of [[x0, 48], [50.5, 52], [58.6, x1]]) { const f = this.box(b - a, 1.6, 0.05, fenceM, (a + b) / 2, 0.8, z1, { cast: false }); f.renderOrder = 2; this.col.add(a, 0, z1 - 0.1, b, 1.6, z1 + 0.1); }
+    for (let x = x0; x <= x1; x += 3) if (x < 48 || x > 58.6) this.box(0.06, 1.7, 0.06, stdMat('#555', 0.4, 0.7), x, 0.85, z1, { cast: false });
+    // Rampa de entrada sobre la acera
+    this.plane(6.4, 4.6, new THREE.MeshStandardMaterial({ map: TX.asphaltTexture([2, 2]), roughness: 0.85 }), 55.2, 0.16, P + 2);
+    // Caseta del guarda y aguja
+    const booth = this.box(1.8, 2.5, 1.8, stdMat('#e9ecef', 0.6), 60, 1.25, z1 - 2.2); this.col.addCentered(60, z1 - 2.2, 1.9, 1.9, 2.6);
+    const bw = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.8), new THREE.MeshStandardMaterial({ color: 0x9fc4d8, roughness: 0.1, metalness: 0.3 })); bw.position.set(59.09, 1.6, z1 - 2.2); bw.rotation.y = -Math.PI / 2; this.group.add(bw);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.6), new THREE.MeshBasicMaterial({ map: TX.signTexture('🅿 PARQUEO DE PRENSA · ACREDITACIONES', '#0b3d91', '#ffffff', 1024, 140, 'bold 52px Arial') }));
+    sign.position.set(55.2, 3.3, z1 + 0.2); this.group.add(sign);
+    for (const sx of [53, 57.4]) this.box(0.12, 3.6, 0.12, stdMat('#333', 0.4, 0.7), sx, 1.8, z1 + 0.2, { cast: false });
+    const post = this.box(0.35, 1.1, 0.35, stdMat('#f2c500', 0.5), 58.4, 0.55, z1 - 0.5); this.col.addCentered(58.4, z1 - 0.5, 0.4, 0.4, 1.1);
+    const pivot = new THREE.Group(); pivot.position.set(58.4, 1.0, z1 - 0.5); this.group.add(pivot); pivot.userData.noMerge = true;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(5.8, 0.1, 0.1), new THREE.MeshStandardMaterial({ map: TX.signTexture('■ ■ ■ ■ ■ ■ ■ ■', '#ffffff', '#d00000', 512, 32, 'bold 30px Arial') }));
+    arm.position.x = -2.9; pivot.add(arm);
+    const barCol = this.col.add(52.4, 0, z1 - 0.7, 58.2, 1.2, z1 - 0.3); barCol.tag = 'curb';
+    this.parking = { x0, x1, z0, z1, entrance: { x0: 52.2, x1: 58.2 }, pivot, angle: 0, target: 0, col: barCol, guardPos: new THREE.Vector3(60, 0, z1 - 3.6), greeted: false };
+    this.spots.parking = new THREE.Vector3(45, 0, (z0 + z1) / 2);
+    this.spots.boothGuard = this.parking.guardPos;
   }
   tree(x, z, s = 1, palm = false) {
     if (palm) {
@@ -216,10 +254,10 @@ export class City {
     }
     // Árboles y palmeras
     for (let x = -150; x <= 150; x += 20) { if (Math.abs(x) < 60) continue; this.tree(x + 6, P + 1.6, 0.8); }
-    for (const [x, z] of [[-55, this.gz + 5], [55, this.gz + 5], [-55, this.gz + 20], [55, this.gz + 20], [-30, this.gz + 4], [30, this.gz + 12]]) this.tree(x, z, 1.1, true);
+    for (const [x, z] of [[-55, this.gz + 5], [55, this.gz + 5], [-55, this.gz + 20], [-30, this.gz + 4], [14, this.gz + 30]]) this.tree(x, z, 1.1, true);
     // Bancas de plaza y basureros
     const benchM = new THREE.MeshStandardMaterial({ map: TX.woodTexture(), roughness: 0.7 });
-    for (const [x, z] of [[-12, this.gz + 25], [12, this.gz + 25], [-50, this.gz + 28], [50, this.gz + 28]]) {
+    for (const [x, z] of [[-12, this.gz + 25], [12, this.gz + 25], [-50, this.gz + 28], [16, this.gz + 8]]) {
       this.box(2, 0.08, 0.5, benchM, x, 0.45, z); this.box(2, 0.45, 0.06, benchM, x, 0.7, z + 0.25);
       this.col.addCentered(x, z, 2, 0.6, 0.5);
     }
@@ -292,6 +330,17 @@ export class City {
     this.col.add(-175, 0, P + 20.4, 175, 10, P + 22);
   }
   update(dt, playerPos, audio) {
+    // Aguja del parqueo: sube cuando se acerca tu carro (o un taxi/Uber) a la entrada
+    const pk = this.parking;
+    if (pk) {
+      const tr = this.game.travel, cars = [tr?.mode === 'drive' ? tr.car : null, tr?.ride].filter(Boolean);
+      const near = cars.some((c) => c.pos.x > pk.entrance.x0 - 4 && c.pos.x < pk.entrance.x1 + 4 && c.pos.z > pk.z1 - 9 && c.pos.z < this.P + 12);
+      if (near && pk.target === 0 && !pk.greeted && tr?.mode === 'drive') { pk.greeted = true; this.game.ui.toast('💂 Guarda: «Buenas, prensa. Pase adelante; las acreditaciones están en el toldo azul, al fondo.»', 'info', 4500); }
+      pk.target = near ? 1 : 0;
+      pk.angle += (pk.target - pk.angle) * Math.min(1, dt * 2.5);
+      pk.pivot.rotation.z = -pk.angle * 1.45;
+      pk.col.enabled = pk.angle < 0.6;
+    }
     // Una sola luz para los interiores: se coloca en el local donde está (o al que se acerca) el jugador
     if (this.shops.length) {
       if (!this.shopLight) { this.shopLight = new THREE.PointLight(0xfff0d8, 0, 13, 1.4); this.group.add(this.shopLight); }

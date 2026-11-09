@@ -312,10 +312,18 @@ export class Screens {
       clear(left); clear(right);
       const evs = c.available(), next = c.nextEvent();
       left.append(h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '14px', marginBottom: '6px' } }, h('div', { class: 'h1' }, 'REDACCIÓN'), h('div', { class: 'muted' }, `Ascenso Total · Día ${c.day}`)));
+      const oo = c.officialOffer && evs.find((x) => x.id === c.officialOffer.eventId && !x.locked);
+      if (oo) left.append(h('div', { class: 'event-card official' }, h('div', {},
+        h('div', { class: 'muted', style: { fontSize: '12px', letterSpacing: '1px' } }, '⭐ OFERTA ESPECIAL · FOTÓGRAFO OFICIAL'),
+        h('div', { class: 'teams', style: { margin: '6px 0' } }, this.ui.crest(g.team(c.officialOffer.team), 30), `${g.teamName(c.officialOffer.team)} te necesita`),
+        h('div', { style: { fontSize: '13px' } }, `Su fotógrafo oficial se enfermó. Cubrí «${oo.title}» como personal del club: acceso a vestuarios, palco VIP y todo el estadio. Pago ×1.3.`)),
+        h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+          h('button', { class: 'btn primary', onclick: () => { const team = c.officialOffer.team; c.officialOffer = null; g.startEvent({ ...oo, official: team, mult: (oo.mult || 1) * 1.3 }); } }, 'Aceptar'),
+          h('button', { class: 'btn small', onclick: () => { c.officialOffer = null; render(); } }, 'Rechazar'))));
       left.append(h('div', { class: 'h3', style: { marginTop: '12px' } }, 'Calendario de coberturas'));
       for (const e of evs) {
         const st = STADIUMS[e.stadium];
-        left.append(h('div', { class: 'event-card' + (e.locked ? ' locked' : '') + (next && next.id === e.id ? ' next' : '') },
+        left.append(h('div', { class: 'event-card' + (e.locked ? ' locked' : '') + (e.cup ? ' cup' : '') + (next && next.id === e.id ? ' next' : '') },
           h('div', {}, h('div', { class: 'muted', style: { fontSize: '12px', letterSpacing: '1px' } }, `${e.title.toUpperCase()} · ${st.name} · ${formatClock(e.kickoff)} · ${TIME_PRESETS[e.time].label} · ${WEATHER_PRESETS[e.weather].label}`),
             h('div', { class: 'teams', style: { margin: '6px 0' } }, this.ui.crest(g.team(e.home), 30), g.teamName(e.home), h('span', { class: 'muted' }, 'vs'), this.ui.crest(g.team(e.away), 30), g.teamName(e.away)),
             h('div', { style: { fontSize: '13px' } }, h('b', {}, 'Encargo: '), `${e.assignment.title} — ${e.assignment.desc}`),

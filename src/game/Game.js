@@ -106,7 +106,7 @@ export class Game {
     this.env.clearRegistry();
     this.env.configure(ev.time, ev.weather, []);
     onProgress(0.3, 'Construyendo estadio…');
-    this.stadium = new Stadium(this, STADIUMS[ev.stadium], home, away);
+    this.stadium = new Stadium(this, { ...STADIUMS[ev.stadium], cup: !!ev.cup }, home, away);
     this.audio.setStadium(ev.stadium);
     this.env.configure(ev.time, ev.weather, this.stadium.lightPositions);
     onProgress(0.6, 'Construyendo la ciudad…');

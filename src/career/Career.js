@@ -20,6 +20,17 @@ export const EVENTS = [
   { id: 'ev6', title: 'GRAN FINAL', home: 'tibas', away: 'brumas', stadium: 'cueva', time: 'night', weather: 'clear', minRep: 68, mult: 2.6, kickoff: 20 * 60, final: true,
     assignment: { title: 'La portada de la final', desc: 'La imagen que abrirá la edición impresa.', tags: ['gol', 'celebracion', 'final', 'atajada'] }, missions: ['m_portada', 'm_final'] },
 ];
+// Copa Centroamericana (competencia ficticia): acreditación especial de la organización
+EVENTS.push(
+  { id: 'cup1', title: 'COPA CENTROAMERICANA · Grupos', cup: true, home: 'tibas', away: 'lempira', stadium: 'cueva', time: 'night', weather: 'clear', minRep: 14, mult: 1.6, kickoff: 20 * 60,
+    assignment: { title: 'Noche internacional', desc: 'Ambiente de copa: la afición, los goles y el rival visitante.', tags: ['gol', 'celebracion', 'publico', 'disputa'] }, missions: ['m_celebracion'] },
+  { id: 'cup2', title: 'COPA CENTROAMERICANA · Cuartos', cup: true, home: 'toros', away: 'canal', stadium: 'alajuela', time: 'night', weather: 'cloudy', minRep: 28, mult: 1.9, kickoff: 20 * 60,
+    assignment: { title: 'Eliminación directa', desc: 'Tensión de cuartos de final: duelos, atajadas y la reacción del banco.', tags: ['disputa', 'atajada', 'remate', 'celebracion'] }, missions: ['m_portero'] },
+  { id: 'cup3', title: 'COPA CENTROAMERICANA · Semifinal', cup: true, home: 'brumas', away: 'quetzal', stadium: 'cartago', time: 'cycle', weather: 'cloudy', minRep: 42, mult: 2.2, kickoff: 17 * 60 + 5,
+    assignment: { title: 'Semifinal bajo la neblina', desc: 'La semifinal en la Vieja Metrópoli: la historia del partido en diez fotos.', tags: ['gol', 'remate', 'atajada', 'celebracion', 'disputa'] }, missions: ['m_gol'] },
+  { id: 'cup4', title: 'COPA CENTROAMERICANA · FINAL', cup: true, final: true, home: 'tibas', away: 'izalco', stadium: 'cueva', time: 'night', weather: 'clear', minRep: 60, mult: 3, kickoff: 20 * 60,
+    assignment: { title: 'Campeones de Centroamérica', desc: 'La foto del campeón: el gol, la celebración y el trofeo.', tags: ['gol', 'celebracion', 'final', 'publico'] }, missions: ['m_final', 'm_portada'] },
+);
 export const TITLES = [[0, 'Fotógrafo amateur'], [12, 'Colaborador'], [30, 'Fotógrafo de planta'], [50, 'Fotógrafo destacado'], [70, 'Referente nacional'], [90, 'Leyenda de la Liga']];
 export const CONTRACTS = [
   { id: 'freelance', name: 'Colaborador · Ascenso Total', minRep: 0, payMult: 1, desc: 'Pago por foto entregada.' },
@@ -82,8 +93,15 @@ export class Career {
     if (this.event && !this.completed.includes(this.event.id)) this.completed.push(this.event.id);
     this.history.unshift({ event: this.currentEventName(), date: new Date().toISOString(), delivered: photos.length, money, rep, best: Math.max(0, ...scores) });
     this.day++;
+    // A veces el club te llama: su fotógrafo oficial se enfermó
+    this.officialOffer = null;
+    const nxt = this.nextEvent();
+    if (nxt && !this.event?.official && this.stats.events >= 1 && Math.random() < 0.4) {
+      this.officialOffer = { eventId: nxt.id, team: nxt.home };
+      this.game.phone?.receive('editor', `Ricardo: me escribieron de ${this.game.teamName(nxt.home)}. Su fotógrafo oficial se enfermó y te quieren a vos para «${nxt.title}». Acceso a vestuarios, palcos y todo el estadio. Revisá la redacción.`);
+    }
     return { rep, money, lines, prevRep, newRep: this.reputation, photos: photos.length };
   }
-  serialize() { return { money: this.money, reputation: this.reputation, completed: this.completed, contract: this.contract, stats: this.stats, history: this.history, day: this.day, offersSeen: this.offersSeen }; }
+  serialize() { return { money: this.money, reputation: this.reputation, completed: this.completed, contract: this.contract, stats: this.stats, history: this.history, day: this.day, offersSeen: this.offersSeen, officialOffer: this.officialOffer || null }; }
   load(d) { if (!d) return; Object.assign(this, d); }
 }

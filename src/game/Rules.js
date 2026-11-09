@@ -7,6 +7,8 @@ export class Rules {
     const g = this.game, st = g.stadium, m = g.match; if (!st) return [];
     const playing = m && PLAY_PHASES.has(m.phase);
     const photo = m && m.phase === 'teamphoto';
+    // Fotógrafo oficial del club: acceso a todo el estadio salvo la cancha mientras se juega
+    if (g.career?.event?.official && !g.arcade) return st.zones.restricted.filter((z) => z.id === 'pitch' && playing);
     return st.zones.restricted.filter((z) => (z.when === 'always' && !(photo && z.id === 'pitch')) || (z.when === 'play' && playing));
   }
   update(dt) {

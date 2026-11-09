@@ -278,24 +278,36 @@ export class Phone {
       const s = this.social;
       body.append(h('div', { class: 'ph-profile' }, h('span', { class: 'av big' }, '📸'), h('div', {}, h('b', {}, this.handle), h('div', { class: 'muted' }, `${s.followers.toLocaleString('es-CR')} seguidores · ${s.posts.length} publicaciones`)),
         h('div', { class: 'ph-tabs' }, h('button', { class: 'btn small primary', onclick: () => this.go('publicar') }, '＋ Publicar foto'), h('button', { class: 'btn small', onclick: () => this.go('perfil') }, 'Mi perfil'))));
-      const feed = [...s.posts.map((p) => ({ mine: true, author: this.handle, avatar: '📸', text: p.caption, thumb: p.thumb, likes: p.likes, comments: p.comments })), ...s.feed].slice(-20).reverse();
+      const feed = [...s.posts.map((p) => ({ mine: true, author: this.handle, avatar: '📸', text: p.caption, thumb: p.thumb, likes: p.likes, comments: p.comments, at: p.at })), ...s.feed].slice(-20).reverse();
       if (!feed.length) body.append(h('div', { class: 'muted', style: { padding: '12px' } }, 'Todavía no hay publicaciones. ¡Subí tu primera foto!'));
       for (const p of feed) body.append(this.postCard(p));
     } else if (V === 'perfil') {
       title('Mi perfil', 'lente');
       const s = this.social;
-      body.append(h('div', { class: 'ph-profile' }, h('span', { class: 'av big' }, '📸'), h('div', {}, h('b', {}, this.handle), h('div', { class: 'muted' }, `${s.followers.toLocaleString('es-CR')} seguidores · ${s.posts.reduce((a, p) => a + p.likes, 0).toLocaleString('es-CR')} me gusta en total`))));
+      body.append(h('div', { class: 'ph-profile' }, h('span', { class: 'av big' }, '📸'), h('div', {}, h('b', {}, this.handle), h('div', { class: 'muted' }, `${s.followers.toLocaleString('es-CR')} seguidores · ${s.posts.reduce((a, p) => a + p.likes, 0).toLocaleString('es-CR')} me gusta`))));
       if (!s.posts.length) body.append(h('div', { class: 'muted', style: { padding: '12px' } }, 'Aún no publicaste nada.'));
-      for (const p of s.posts.slice().reverse()) body.append(this.postCard({ mine: true, author: this.handle, avatar: '📸', text: p.caption, thumb: p.thumb, likes: p.likes, comments: p.comments }));
+      const open = s.posts.find((p) => p.id === this.viewPost);
+      if (open) body.append(h('button', { class: 'btn small', style: { alignSelf: 'flex-start' }, onclick: () => { this.viewPost = null; this.render(); } }, '‹ Ver todas'), this.postCard({ mine: true, author: this.handle, avatar: '📸', text: open.caption, thumb: open.thumb, likes: open.likes, comments: open.comments, at: open.at }));
+      else body.append(h('div', { class: 'lt-grid' }, s.posts.slice().reverse().map((p) => h('button', { class: 'lt-cell', onclick: () => { this.viewPost = p.id; this.render(); } }, h('img', { src: p.thumb }), h('span', {}, `♥ ${p.likes.toLocaleString('es-CR')}`)))));
     } else if (V === 'publicar') {
       title('Publicar en Lente', 'lente');
-      const recs = g.photos.records.filter((r) => !r.posted && !this.social.posts.some((p) => p.photoId === r.id)).slice(-12).reverse();
-      if (!recs.length) body.append(h('div', { class: 'muted', style: { padding: '12px' } }, 'No tenés fotos nuevas. Tomá algunas con la cámara y volvé.'));
-      body.append(h('div', { class: 'ph-grid' }, recs.map((r) => h('button', { class: 'ph-thumb' + (this.pick === r.id ? ' on' : ''), onclick: () => { this.pick = r.id; this.render(); } }, h('img', { src: r.thumb }), h('i', {}, Math.round(r.eval.score))))));
+      const recs = g.photos.records.filter((r) => !r.posted && !this.social.posts.some((p) => p.photoId === r.id)).slice(-24).reverse();
       const rec = recs.find((r) => r.id === this.pick);
-      if (rec) {
-        body.append(h('div', { class: 'h3', style: { margin: '8px 4px 4px' } }, 'Elegí un texto:'));
-        body.append(h('div', { class: 'ph-replies' }, this.captions(rec).map((cap) => h('button', { class: 'btn small primary', onclick: () => { this.publish(rec, cap); this.pick = null; g.ui.toast('📷 Publicaste en Lente', 'good'); this.go('lente'); } }, cap))));
+      if (!recs.length) body.append(h('div', { class: 'muted', style: { padding: '12px' } }, 'No tenés fotos nuevas. Tomá algunas con la cámara y volvé.'));
+      else if (!rec) {
+        // Paso 1: elegir la foto (miniaturas grandes, con nota y momento)
+        body.append(h('div', { class: 'lt-step' }, '1 · Elegí una foto'));
+        body.append(h('div', { class: 'lt-pick' }, recs.map((r) => h('button', { class: 'lt-photo', onclick: () => { this.pick = r.id; this.cap = null; this.render(); } },
+          h('img', { src: r.thumb }), h('span', { class: 'sc' }, Math.round(r.eval.score)), h('span', { class: 'mo' }, r.eval.moment?.label || '')))));
+      } else {
+        // Paso 2: vista previa grande, texto y publicar
+        const caps = this.captions(rec); if (!this.cap) this.cap = caps[0];
+        body.append(h('div', { class: 'lt-step' }, '2 · Revisá y escribí el texto'));
+        body.append(h('div', { class: 'lt-preview' }, h('img', { src: rec.thumb }), h('div', { class: 'lt-meta' }, h('b', {}, `${Math.round(rec.eval.score)}/100`), ` · ${rec.eval.moment?.label || ''}`)));
+        body.append(h('div', { class: 'lt-caps' }, caps.map((c) => h('button', { class: 'lt-cap' + (c === this.cap ? ' on' : ''), onclick: () => { this.cap = c; this.render(); } }, c))));
+        body.append(h('div', { class: 'lt-actions' },
+          h('button', { class: 'btn small', onclick: () => { this.pick = null; this.render(); } }, '‹ Otra foto'),
+          h('button', { class: 'btn primary', onclick: () => { this.publish(rec, this.cap); this.pick = null; this.cap = null; g.ui.toast('📷 Publicaste en Lente', 'good'); this.go('lente'); } }, 'Publicar')));
       }
     } else if (V === 'entradas') {
       title('Entradas');
@@ -355,7 +367,7 @@ export class Phone {
     }
   }
   postCard(p) {
-    return h('div', { class: 'ph-post' }, h('div', { class: 'ph-post-h' }, h('span', { class: 'av' }, p.avatar), h('b', {}, p.author)),
+    return h('div', { class: 'ph-post' }, h('div', { class: 'ph-post-h' }, h('span', { class: 'av' }, p.avatar), h('b', {}, p.author), p.at ? h('small', { class: 'muted' }, p.at) : null),
       p.thumb ? h('img', { src: p.thumb }) : null, h('div', { class: 'ph-post-t' }, p.text),
       h('div', { class: 'ph-post-f' }, `♥ ${(p.likes || 0).toLocaleString('es-CR')}`, p.comments ? ` · 💬 ${p.comments.length}` : ''),
       p.comments?.length ? h('div', { class: 'ph-comments' }, p.comments.slice(-3).map((c) => h('div', {}, h('b', {}, c.who), ' ', c.text))) : null);

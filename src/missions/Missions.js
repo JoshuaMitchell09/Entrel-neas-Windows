@@ -14,13 +14,15 @@ export const MISSION_DEFS = {
   m_clasico: { title: 'El clásico', desc: 'Conseguí 10 fotografías de calidad superior a 80.', kind: 'event', target: 10, photo: { tags: null, min: 80 }, reward: { money: 120000, rep: 6 } },
   m_portada: { title: 'La portada', desc: 'Capturá una imagen digna de portada (momento clave, 85+ y buena composición).', kind: 'event', target: 1, photo: { tags: ['portada'], min: 85 }, reward: { money: 90000, rep: 6 } },
   m_entrevista: { title: 'Zona mixta', desc: 'Fotografiá la entrevista al jugador del partido junto al túnel (calidad mínima 45).', kind: 'event', target: 1, photo: { tags: ['entrevista'], min: 45 }, reward: { money: 15000, rep: 2 } },
+  m_vestuario: { title: 'La previa en el vestuario', desc: 'Como fotógrafo oficial: fotografiá el vestuario de tu club (camisetas, pizarra) antes del partido.', kind: 'event', target: 1, trigger: 'story:lockerPhoto', reward: { money: 25000, rep: 3 } },
+  m_palco: { title: 'Vista desde el palco', desc: 'Subí al palco VIP y tomá una foto panorámica del estadio.', kind: 'event', target: 1, trigger: 'story:palcoPhoto', reward: { money: 15000, rep: 2 } },
   m_final: { title: 'Campeones', desc: 'Fotografiá la celebración del campeón al final del partido (mínimo 60).', kind: 'event', target: 1, photo: { tags: ['final', 'celebracion'], min: 60, phase: 'fulltime' }, reward: { money: 80000, rep: 5 } },
 };
 export class MissionSystem {
   constructor(game) {
     this.game = game; this.active = []; this.done = [];
     game.events.on('photo:taken', (rec) => this.onPhoto(rec));
-    for (const t of ['story:credential', 'story:gate', 'story:security', 'story:prepared', 'story:alvaro', 'delivery:valid']) game.events.on(t, () => this.onTrigger(t));
+    for (const t of ['story:credential', 'story:gate', 'story:security', 'story:prepared', 'story:alvaro', 'delivery:valid', 'story:lockerPhoto', 'story:palcoPhoto']) game.events.on(t, () => this.onTrigger(t));
   }
   add(id) {
     if (this.active.some((m) => m.id === id) || (this.done.includes(id) && MISSION_DEFS[id].kind === 'story' && !['m_acred', 'm_llegar', 'm_seguridad', 'm_preparar', 'm_cancha'].includes(id))) return;
@@ -32,6 +34,10 @@ export class MissionSystem {
   clearEventMissions() { this.active = this.active.filter((m) => m.kind === 'story' && m.status === 'active'); }
   onTrigger(t) { for (const m of this.active) if (m.status === 'active' && m.trigger === t) this.advance(m, 1); }
   onPhoto(rec) {
+    // Fotos de lugares especiales (fotógrafo oficial)
+    const g = this.game, st = g.stadium, p = g.player.pos;
+    if (st?.lockerRooms?.some((L) => p.x > L.box.x0 && p.x < L.box.x1 && p.z > L.box.z0 && p.z < L.box.z1)) g.events.emit('story:lockerPhoto');
+    if (st?.palco && p.y > 3) g.events.emit('story:palcoPhoto');
     const ph = this.game.match?.phase;
     for (const m of this.active) {
       if (m.status !== 'active' || !m.photo) continue;

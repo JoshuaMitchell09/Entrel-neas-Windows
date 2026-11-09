@@ -16,6 +16,7 @@ Esta es la versión de escritorio para **Windows 10/11 (64 bits)**. Tiene todo l
 - **Puerta de seguridad:** puerta de vidrio transparente y corrediza.
 - **Modo dron / tráiler** (`K`): 7 tomas, cámara lenta y franjas de cine. `R` graba un video con sonido, que queda en `Videos\Entre Lineas`.
 - **Pulpería, soda y bar** con interior: se entra caminando y lo que comprés tiene efecto en el juego.
+- **Copa Centroamericana**, **fotógrafo oficial** (vestuario y palco VIP), **parqueo de prensa** con aguja y **fuera de juego**.
 - **Grabá con tu celular** en vertical (9:16) u horizontal (16:9), con cámara trasera o selfie. Los videos quedan en `Videos\Entre Lineas`.
 - **Desde tu casa hasta el estadio:** manejá tu carro, tomá el bus o pedí un taxi o un Uber desde el teléfono.
 - **Trifulcas, entrevista al jugador del partido y zona de comidas** en todos los estadios.

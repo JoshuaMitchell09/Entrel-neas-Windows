@@ -61,8 +61,10 @@ export class Travel {
   }
   exit() {
     const g = this.game, v = this.vehicle; if (!v) return;
-    const P = this.P, side = v.pos.z < P + 10 ? P + 2.2 : P + 17.8;
-    g.player.place(v.pos.x + (v.kind === 'bus' ? 3 : 0), side, Math.PI / 2); g.follow.yaw = Math.PI / 2; g.follow.snap(g.player);
+    const P = this.P, pk = g.city.parking, inLot = pk && v.pos.z < pk.z1 && v.pos.x > pk.x0;
+    const side = v.pos.z < P + 10 ? P + 2.2 : P + 17.8;
+    if (inLot) { const r = new THREE.Vector3(Math.sin(v.yaw), 0, Math.cos(v.yaw)); g.player.place(v.pos.x + r.x * 1.9, v.pos.z + r.z * 1.9, v.yaw + Math.PI / 2); }
+    else g.player.place(v.pos.x + (v.kind === 'bus' ? 3 : 0), side, Math.PI / 2); g.follow.yaw = Math.PI / 2; g.follow.snap(g.player);
     this.mode = null; this.vehicle = null; this.ff = 1; g.audio?.ui('door');
     g.input.pressed.clear(); g.input.consumePad(); // que la misma tecla no te vuelva a subir
     if (g.camera.fov !== g.settings.data.fov) { g.camera.fov = g.settings.data.fov; g.camera.updateProjectionMatrix(); }
@@ -147,11 +149,18 @@ export class Travel {
       if (brk > 0.05) c.v -= (c.v > 0.3 ? 13 : 4) * Math.min(1, brk) * dt;
       c.v *= 1 - 0.12 * dt; if (!thr && !brk) c.v *= 1 - 0.5 * dt;
       c.v = clamp(c.v, -5, 19);
+      const prev = c.pos.clone();
       c.yaw += steer * c.v / 2.6 * Math.tan(0.5) * dt;
       c.pos.x += Math.cos(c.yaw) * c.v * dt; c.pos.z -= Math.sin(c.yaw) * c.v * dt;
       // Mantenerse en la calle; chocar con el tráfico
-      const zl = P + 4.6, zh = P + 15.4;
-      if (c.pos.z < zl || c.pos.z > zh || c.pos.x < AVE_X1 + 3 || c.pos.x > 165) { c.pos.z = clamp(c.pos.z, zl, zh); c.pos.x = clamp(c.pos.x, AVE_X1 + 3, 165); c.v *= 0.6; }
+      const zl = P + 4.6, zh = P + 15.4, pk = city.parking;
+      const inRoad = c.pos.z >= zl && c.pos.z <= zh && c.pos.x >= AVE_X1 + 3 && c.pos.x <= 165;
+      const inDrive = pk && c.pos.x > pk.entrance.x0 + 0.9 && c.pos.x < pk.entrance.x1 - 0.9 && c.pos.z > pk.z1 - 1.5 && c.pos.z < zl + 0.5;
+      const inLot = pk && c.pos.x > pk.x0 + 1.2 && c.pos.x < pk.x1 - 1.2 && c.pos.z > pk.z0 + 1.2 && c.pos.z < pk.z1 - 0.4;
+      if (!inRoad && !inDrive && !inLot) {
+        if (pk && !inRoad && (prev.z >= zl || inDrive) && c.pos.x > pk.entrance.x0 && c.pos.x < pk.entrance.x1) { /* entrando por la rampa */ }
+        else { c.pos.copy(prev); c.v *= -0.2; }
+      }
       for (const o of [...city.cars.map((x) => x.obj), b.obj, r?.obj].filter(Boolean)) {
         const dx = c.pos.x - o.position.x, dz = c.pos.z - o.position.z, lim = (o.userData.L || 4.2) / 2 + 2.1;
         if (Math.abs(dx) < lim && Math.abs(dz) < 1.9) {
