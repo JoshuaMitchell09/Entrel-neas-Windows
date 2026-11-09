@@ -241,7 +241,7 @@ export class Phone {
     if (V === 'home') {
       body.append(h('div', { class: 'ph-wall' }, h('div', { class: 'ph-bigclock' }, formatClock(g.clock)), h('div', { class: 'muted' }, this.kickoffLine())));
       const unreadChats = Object.values(this.unread).reduce((a, b) => a + b, 0);
-      const apps = [['msgs', '💬', 'Mensajes', unreadChats], ['lente', '📷', 'Lente', this.social.newLikes ? '•' : 0], ['entradas', '🎟️', 'Entradas', this.tickets.filter((t) => t.status === 'disponible').length], ['transporte', '🚕', 'Transporte', 0], ['reloj', '⏱️', 'Reloj', 0], ['galeria', '🖼️', 'Galería', 0], ['mapa', '🗺️', 'Mapa', 0]];
+      const apps = [['msgs', '💬', 'Mensajes', unreadChats], ['lente', '📷', 'Lente', this.social.newLikes ? '•' : 0], ['entradas', '🎟️', 'Entradas', this.tickets.filter((t) => t.status === 'disponible').length], ['camara', '📹', 'Cámara', 0], ['transporte', '🚕', 'Transporte', 0], ['reloj', '⏱️', 'Reloj', 0], ['galeria', '🖼️', 'Galería', 0], ['mapa', '🗺️', 'Mapa', 0]];
       body.append(h('div', { class: 'ph-apps' }, apps.map(([id, ic, name, badge]) => h('button', { class: 'ph-app', onclick: () => {
         if (id === 'galeria') { g.screens.pause('galeria'); return; }
         if (id === 'mapa') { g.screens.pause('mapa'); return; }
@@ -309,6 +309,15 @@ export class Phone {
       const t = this.tickets.find((x) => x.id === this.sel);
       body.append(h('div', { class: 'muted', style: { padding: '4px 8px 8px' } }, 'Van a estar en la gradería en tu próxima cobertura, cerca de tu zona de prensa. ¡Buscalos y tomales una foto!'));
       for (const c of CONTACTS.filter((x) => x.family || x.friend)) body.append(h('button', { class: 'ph-row', onclick: () => { if (t && t.status === 'disponible') { this.giveTicket(t, c.id); this.go('chat', c.id); } } }, h('span', { class: 'av', style: { background: c.color } }, c.emoji), h('span', { class: 'mid' }, h('b', {}, c.name), h('span', { class: 'prev' }, c.family ? 'Familia' : 'Amigo'))));
+    } else if (V === 'camara') {
+      title('Cámara');
+      body.append(h('div', { class: 'muted', style: { padding: '6px 8px' } }, 'Grabá video con el celular para presentar el juego. El video se descarga con el sonido del juego; la interfaz no sale.'));
+      body.append(h('div', { class: 'ph-replies' },
+        h('button', { class: 'btn small primary', onclick: () => { g.resume(); g.phoneCam.enter('v', false); } }, '📱 Grabar en vertical (9:16 · Reels/TikTok)'),
+        h('button', { class: 'btn small primary', onclick: () => { g.resume(); g.phoneCam.enter('h', false); } }, '🖥️ Grabar en horizontal (16:9 · YouTube)'),
+        h('button', { class: 'btn small', onclick: () => { g.resume(); g.phoneCam.enter('v', true); } }, '🤳 Selfie en vertical'),
+        h('button', { class: 'btn small', onclick: () => { g.resume(); g.phoneCam.enter('h', true); } }, '🤳 Selfie en horizontal')));
+      body.append(h('div', { class: 'muted', style: { padding: '8px', fontSize: '12px' } }, 'Para tomas aéreas usá el modo dron (K): también graba en vertical con V.'));
     } else if (V === 'transporte') {
       title('Transporte');
       const tr = g.travel, st = tr?.status();

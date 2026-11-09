@@ -86,7 +86,7 @@ export class UI {
   // ---------- Actualización por frame ----------
   update(dt) {
     const g = this.game;
-    const showHud = !this.screen && g.state === 'play' && !g.photoMode.active && !this.dialogueActive && !g.cinematic && !g.drone?.active;
+    const showHud = !this.screen && g.state === 'play' && !g.photoMode.active && !this.dialogueActive && !g.cinematic && !g.drone?.active && !g.phoneCam?.active;
     this.hud.classList.toggle('hidden', !showHud);
     this.vf.root.classList.toggle('show', g.photoMode.active && !this.screen);
     this.crossEl.style.display = showHud && g.follow.firstPerson ? 'block' : 'none';

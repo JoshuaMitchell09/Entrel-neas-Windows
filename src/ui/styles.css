@@ -320,3 +320,12 @@ select, input[type=text] { background: #0e1830; color: var(--text); border: 1px 
 .subtitle { position: absolute; left: 50%; bottom: 150px; transform: translateX(-50%); max-width: min(760px, 90vw); background: rgba(0,0,0,.72); padding: 8px 14px; border-radius: 8px; font-size: 16px; text-align: center; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 7; }
 .subtitle.show { opacity: 1; }
 .subtitle b { color: var(--accent); }
+
+/* ---------- Grabación con el celular / formato vertical ---------- */
+.rec-guide { position: absolute; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,.55); border: 2px solid rgba(255,255,255,.55); border-radius: 14px; z-index: 4; }
+.rec-guide.rec { border-color: #ff4d5e; }
+.rec-guide .rg-lbl { position: absolute; top: 10px; left: 12px; font-size: 12px; letter-spacing: 1.5px; background: rgba(0,0,0,.5); padding: 3px 8px; border-radius: 6px; }
+.rec-guide .rg-rec { position: absolute; top: 10px; right: 12px; font-size: 13px; font-weight: 800; color: #ff4d5e; display: none; }
+.rec-guide.rec .rg-rec { display: block; animation: blink 1s infinite; }
+.pc-ui { position: absolute; left: 16px; bottom: 14px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; z-index: 6; }
+.pc-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; background: rgba(5,10,20,.75); padding: 8px 12px; border-radius: 10px; align-self: flex-start; }

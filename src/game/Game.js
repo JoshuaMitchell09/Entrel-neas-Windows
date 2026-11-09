@@ -35,6 +35,8 @@ import { Phone } from '../phone/Phone.js';
 import { CrowdLife } from '../world/CrowdLife.js';
 import { DroneCam } from '../cinema/DroneCam.js';
 import { Travel } from '../world/Travel.js';
+import { Recorder } from '../cinema/Recorder.js';
+import { PhoneCam } from '../cinema/PhoneCam.js';
 import { clamp } from '../core/MathUtil.js';
 
 export class Game {
@@ -57,7 +59,7 @@ export class Game {
     this.interaction = new InteractionSystem(this); this.photoMode = new PhotoMode(this);
     this.player = new PlayerController(this); this.follow = new FollowCamera(this, this.camera);
     this.post = new PostFX(this); this.scene.add(this.camera); this.viewModel = new ViewModel(this);
-    this.phone = new Phone(this); this.crowdLife = new CrowdLife(this); this.drone = new DroneCam(this); this.travel = new Travel(this);
+    this.phone = new Phone(this); this.crowdLife = new CrowdLife(this); this.drone = new DroneCam(this); this.travel = new Travel(this); this.recorder = new Recorder(this); this.phoneCam = new PhoneCam(this);
     this.state = 'boot'; this.clock = 15 * 60; this.time = 0; this.fps = 60; this.inEvent = false; this.cinematic = false;
     this.playerName = 'Fotógrafo'; this.profileId = null; this.menuT = 0;
     this.resize(); window.addEventListener('resize', () => this.resize());
@@ -256,6 +258,7 @@ export class Game {
   }
   onEscape() {
     if (this.state !== 'play') return;
+    if (this.phoneCam.active) { this.phoneCam.exit(); return; }
     if (this.drone.active) { this.drone.exit(); return; }
     if (this.photoMode.active) { this.photoMode.exit(); return; }
     if (this.ui.dialogueActive || this.cinematic) return;
@@ -265,6 +268,7 @@ export class Game {
   handleInput() {
     const inp = this.input, pm = this.photoMode, p = this.player;
     if (this.drone.active) { if (inp.keyPressed('Escape')) this.drone.exit(); return; }
+    if (this.phoneCam.active) { if (!this.ui.screen && (inp.keyPressed(inp.bind('phone')))) { this.phone.open(); } return; }
     if (this.travel.mode) { if (inp.keyPressed('Escape') || inp.padPressed('pause')) this.onEscape(); else if (!this.ui.screen && (inp.keyPressed(inp.bind('phone')) || (inp.padPressed('phone')))) { inp.consumePad(); this.phone.open(); } return; }
     if (inp.keyPressed('Escape') || inp.padPressed('pause')) this.onEscape();
     if (this.ui.screenName === 'phone' && (inp.keyPressed(inp.bind('phone')) || inp.padPressed('phone'))) { inp.consumePad(); this.resume(); return; }
@@ -322,7 +326,7 @@ export class Game {
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       this.fps = this.fps * 0.95 + (1 / Math.max(dt, 1e-3)) * 0.05;
       this.dynamicResolution(dt);
-      try { this.update(this.drone.active ? dt * this.drone.timeScale : dt); this.drone.update(); this.render(); } catch (e) { console.error(e); }
+      try { this.update(this.drone.active ? dt * this.drone.timeScale : dt); this.drone.update(); this.render(); this.recorder.frame(); } catch (e) { console.error(e); }
       this.input.endFrame();
     };
     requestAnimationFrame(loop);
@@ -347,12 +351,14 @@ export class Game {
       this.player.root.visible = false;
       return;
     }
-    if (this.state !== 'play') { if (this.drone.active) this.drone.exit(); return; }
+    if (this.state !== 'play') { if (this.drone.active) this.drone.exit(); if (this.phoneCam.active) this.phoneCam.exit(); return; }
     this.handleInput();
     const paused = !!this.ui.screen;
     if (paused) { this.phone.update(dt); this.ui.update(dt); return; }
     const freeMove = !this.ui.dialogueActive && !this.cinematic && !this.drone.active && !this.travel.mode;
-    if (!this.photoMode.active) {
+    if (this.phoneCam.active) {
+      p.update(dt, this.input, this.phoneCam.moveYaw(), freeMove);
+    } else if (!this.photoMode.active) {
       this.follow.update(dt, this.input, p, freeMove && (this.input.locked || this.input.pad));
       p.update(dt, this.input, this.follow.yaw, freeMove);
       p.root.visible = this.drone.active || (!this.follow.firstPerson && !this.camOverride);
@@ -392,7 +398,7 @@ export class Game {
       n.root.visible = vis;
       if (vis && n.pos.distanceTo(p.pos) < 140) n.update(dt, p.pos);
     }
-    this.story.update(dt); this.rules.update(dt); this.crowdLife.update(dt); this.phone.update(dt); this.travel.update(dt);
+    this.story.update(dt); this.rules.update(dt); this.crowdLife.update(dt); this.phone.update(dt); this.travel.update(dt); this.phoneCam.update(dt);
     this.env.update(dt, st && Math.abs(p.pos.x) < 75 && Math.abs(p.pos.z) < 48 ? new THREE.Vector3(0, 0, 0) : this.camera.position, this.time, this.clock / 60);
     // Audio
     const interior = st && p.pos.z > APRON_Z + 0.5 && p.pos.z < st.gateZ && Math.abs(p.pos.x) < 25;

@@ -51,6 +51,8 @@ export class Travel {
   enter(mode, vehicle) {
     const g = this.game; if (g.photoMode.active) g.photoMode.exit();
     this.mode = mode; this.vehicle = vehicle; this.view = 'out'; this.ff = 1;
+    // La misma pulsación que te subió no debe bajarte: se consume y hay un margen antes de poder bajarse
+    g.input.pressed.clear(); g.input.consumePad(); this.grace = 0.6;
     g.player.setCameraEquipped(false); g.audio?.ui('door');
     this.camPos.copy(g.camera.position); this.camLook.copy(vehicle.pos);
     const k = g.ui.key('interact');
@@ -62,6 +64,7 @@ export class Travel {
     const P = this.P, side = v.pos.z < P + 10 ? P + 2.2 : P + 17.8;
     g.player.place(v.pos.x + (v.kind === 'bus' ? 3 : 0), side, Math.PI / 2); g.follow.yaw = Math.PI / 2; g.follow.snap(g.player);
     this.mode = null; this.vehicle = null; this.ff = 1; g.audio?.ui('door');
+    g.input.pressed.clear(); g.input.consumePad(); // que la misma tecla no te vuelva a subir
     if (g.camera.fov !== g.settings.data.fov) { g.camera.fov = g.settings.data.fov; g.camera.updateProjectionMatrix(); }
   }
   boardBus() {
@@ -164,7 +167,8 @@ export class Travel {
     if (!this.mode) return;
     // Bajarse
     const v = this.vehicle;
-    if ((inp.keyPressed(inp.bind('interact')) || inp.padTriggerPressed(0)) && !g.ui.screen) {
+    this.grace = Math.max(0, (this.grace || 0) - dt);
+    if (this.grace <= 0 && (inp.keyPressed(inp.bind('interact')) || inp.padTriggerPressed(0)) && !g.ui.screen) {
       if (this.mode === 'drive' && Math.abs(v.v) < 2) return this.exit();
       if (this.mode === 'bus' && b.stopped) return this.exit();
       if (this.mode === 'ride' && Math.abs(v.v) < 1) return this.exit();

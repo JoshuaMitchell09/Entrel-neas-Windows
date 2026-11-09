@@ -44,7 +44,7 @@ export class DroneCam {
   exit() {
     const g = this.game; if (!this.active) return;
     if (this.rec) this.stopRec();
-    this.active = false; this.timeScale = 1; this.letterbox = 0; g.post.letterbox = 0;
+    this.active = false; this.timeScale = 1; this.letterbox = 0; g.post.letterbox = 0; g.recorder.hideGuide();
     this.el?.remove(); this.el = null;
     g.camera.fov = g.settings.data.fov; g.camera.updateProjectionMatrix(); g.follow.snap(g.player);
     g.ui.toast('Modo dron desactivado', 'info', 1500);
@@ -59,6 +59,7 @@ export class DroneCam {
     if (inp.keyPressed('KeyR') || inp.padTriggerPressed(2)) this.rec ? this.stopRec() : this.startRec();
     if (inp.keyPressed('KeyL') || inp.padTriggerPressed(3)) { this.speedIdx = (this.speedIdx + 1) % SPEEDS.length; this.timeScale = SPEEDS[this.speedIdx]; this.renderUI(); }
     if (inp.keyPressed('KeyB') || inp.padTriggerPressed(8)) { this.letterbox = this.letterbox ? 0 : 1; this.renderUI(); }
+    if ((inp.keyPressed('KeyV') || inp.padTriggerPressed(10)) && !this.rec) { this.aspect = this.aspect === 'v' ? 'h' : 'v'; if (this.aspect === 'v') { this.letterbox = 0; this.game.recorder.showGuide('v'); } else this.game.recorder.hideGuide(); this.renderUI(); }
     if (inp.keyPressed('KeyH') || inp.padTriggerPressed(9)) { this.showUI = !this.showUI; if (this.el) this.el.style.display = this.showUI ? '' : 'none'; }
     // Zoom (campo de visión)
     if (inp.mouse.wheel) this.tFov = clamp(this.tFov + inp.mouse.wheel * 3, 12, 95);
@@ -136,29 +137,8 @@ export class DroneCam {
     if (this.rec && this.recEl) { const s = Math.floor((performance.now() - this.recStart) / 1000); this.recEl.textContent = `● REC ${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
   }
   // ---------- Grabación ----------
-  startRec() {
-    const g = this.game;
-    if (!window.MediaRecorder || !g.renderer.domElement.captureStream) { g.ui.toast('Este navegador no permite grabar video. Usá Chrome, Edge o Safari actualizado.', 'bad', 4000); return; }
-    const stream = g.renderer.domElement.captureStream(60);
-    try {
-      const a = g.audio; if (a?.ctx && a.master) { if (!this.audDest) { this.audDest = a.ctx.createMediaStreamDestination(); a.master.connect(this.audDest); } const tr = this.audDest.stream.getAudioTracks()[0]; if (tr) stream.addTrack(tr); }
-    } catch (e) { /* sin audio */ }
-    const types = ['video/mp4;codecs=avc1.640028,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-    const mimeType = types.find((t) => MediaRecorder.isTypeSupported(t)) || '';
-    let rec; try { rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 18_000_000, audioBitsPerSecond: 192_000 }); } catch (e) { g.ui.toast('No se pudo iniciar la grabación.', 'bad'); return; }
-    const chunks = []; rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-    rec.onstop = () => {
-      const type = rec.mimeType || mimeType || 'video/webm', ext = type.includes('mp4') ? 'mp4' : 'webm';
-      const blob = new Blob(chunks, { type }), url = URL.createObjectURL(blob);
-      const d = new Date(), stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}_${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}${String(d.getSeconds()).padStart(2, '0')}`;
-      const a = document.createElement('a'); a.href = url; a.download = `EntreLineas_${stamp}.${ext}`; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-      g.ui.toast(`🎬 Video guardado: EntreLineas_${stamp}.${ext} (${(blob.size / 1048576).toFixed(1)} MB)`, 'good', 6000);
-    };
-    rec.start(1000); this.rec = rec; this.recStart = performance.now();
-    g.ui.toast('● Grabando… (R para detener)', 'bad', 2000); this.renderUI();
-  }
-  stopRec() { if (!this.rec) return; try { this.rec.stop(); } catch (e) { /* */ } this.rec = null; this.renderUI(); }
+  startRec() { const g = this.game; if (g.recorder.start(this.aspect || 'h', 'EntreLineas_dron')) { this.rec = true; this.recStart = performance.now(); g.ui.toast('● Grabando… (R para detener)', 'bad', 2000); this.renderUI(); } }
+  stopRec() { if (!this.rec) return; this.game.recorder.stop(); this.rec = null; this.renderUI(); }
   // ---------- Interfaz ----------
   buildUI() {
     this.el = h('div', { class: 'drone-ui' }); this.game.ui.root.appendChild(this.el); this.renderUI();
@@ -169,12 +149,12 @@ export class DroneCam {
     this.el.innerHTML = '';
     this.el.append(
       h('div', { class: 'dr-top' }, h('b', {}, '🎥 MODO DRON'), h('span', {}, this.M.label), extra ? h('span', { class: 'muted' }, extra) : null,
-        this.timeScale < 1 ? h('span', { class: 'pill' }, `Cámara lenta ×${this.timeScale}`) : null, this.letterbox ? h('span', { class: 'pill' }, 'Cine 2.39:1') : null,
+        this.timeScale < 1 ? h('span', { class: 'pill' }, `Cámara lenta ×${this.timeScale}`) : null, this.letterbox ? h('span', { class: 'pill' }, 'Cine 2.39:1') : null, h('span', { class: 'pill' }, this.aspect === 'v' ? '9:16 vertical' : '16:9 horizontal'),
         this.recEl = this.rec ? h('span', { class: 'dr-rec' }, '● REC 00:00') : null),
       h('div', { class: 'dr-modes' }, MODES.map((mo, i) => h('button', { class: 'btn small' + (i === this.mode ? ' primary' : ''), onclick: () => this.setMode(i) }, `${i + 1} ${mo.label}`))),
       h('div', { class: 'dr-help' }, this.M.help, h('br'), g.input.lastDevice === 'pad'
-        ? '✕ siguiente toma · □ grabar · △ cámara lenta · Create franjas · Options ocultar panel · L1/R1 bajar/subir · L2/R2 zoom · ○ salir'
-        : 'Rueda zoom · R grabar · L cámara lenta · B franjas de cine · H ocultar panel · K / Esc salir'),
+        ? '✕ siguiente toma · □ grabar · △ cámara lenta · L3 vertical/horizontal · Create franjas · Options ocultar panel · L1/R1 bajar/subir · L2/R2 zoom · ○ salir'
+        : 'Rueda zoom · R grabar · V vertical/horizontal · L cámara lenta · B franjas de cine · H ocultar panel · K / Esc salir'),
     );
     if (!this.rec) this.recEl = null;
   }
