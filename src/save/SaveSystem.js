@@ -7,7 +7,7 @@ export class SaveSystem {
   snapshot() {
     const g = this.game;
     return { version: 1, savedAt: new Date().toISOString(), profileId: g.profileId, playerName: g.playerName,
-      career: g.career.serialize(), inventory: g.inventory.serialize(), missions: g.missions.serialize(), story: g.story.serialize(), phone: g.phone?.serialize(), look: g.player.look };
+      career: g.career.serialize(), inventory: g.inventory.serialize(), missions: g.missions.serialize(), story: g.story.serialize(), phone: g.phone?.serialize(), look: g.player.look, cardPhoto: g.cardPhoto || null };
   }
   save(slot = 'auto') {
     if (this.game.arcade) return false; // el modo arcade no toca la carrera

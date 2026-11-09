@@ -166,10 +166,10 @@ export class Game {
   }
   // ---------------- Partidas ----------------
   get female() { return this.player?.look?.gender === 'mujer'; }
-  async newGame(name, look) {
+  async newGame(name, look, photo = null) {
     this.arcade = false;
     if (look) this.player.applyLook(look);
-    this.playerName = name; this.profileId = 'p_' + Date.now();
+    this.playerName = name; this.profileId = 'p_' + Date.now(); this.cardPhoto = photo;
     await this.photos.setProfile(this.profileId);
     this.career.reset(); this.inventory.reset(); this.missions.active = []; this.missions.done = []; this.story.introDone = false; this.phone.reset();
     this.saves.save('auto');
@@ -177,7 +177,7 @@ export class Game {
   }
   async applySave(d) {
     this.arcade = false;
-    this.playerName = d.playerName; this.profileId = d.profileId;
+    this.playerName = d.playerName; this.profileId = d.profileId; this.cardPhoto = d.cardPhoto || null;
     await this.photos.setProfile(this.profileId);
     this.career.reset(); this.career.load(d.career); this.inventory.reset(); this.inventory.load(d.inventory); this.missions.load(d.missions); this.story.load(d.story); this.phone.load(d.phone);
     if (d.look) this.player.applyLook(d.look);
@@ -194,6 +194,7 @@ export class Game {
     this.arcadeCfg = cfg; this.arcade = true;
     this.ui.closeScreen(true);
     this.playerName = cfg.name || 'Fotógrafo';
+    try { this.cardPhoto = cfg.photo !== undefined ? cfg.photo : localStorage.getItem('entrelineas.arcadePhoto'); } catch (e) { this.cardPhoto = null; }
     await this.photos.setProfile('arcade'); this.phone.reset();
     // Equipo completo disponible y listo
     const inv = this.inventory; inv.reset();

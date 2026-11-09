@@ -13,6 +13,7 @@ import { LABELS } from '../photography/PhotoEvaluator.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { TEAMS } from '../football/Teams.js';
 import { openCustomizer } from './Customizer.js';
+import { cardPhotoPicker, cardImage } from './CardPhoto.js';
 import { showChangelog, changelogSeen, VERSION, AUTHOR, COPYRIGHT } from './Changelog.js';
 
 const ICONS = { camera: '📷', lens: '🔭', card: '💾', battery: '🔋', accessory: '🧰', backpack: '🎒', credential: '🪪' };
@@ -82,11 +83,13 @@ export class Screens {
   async newGameDialog() {
     const g = this.game;
     if (g.saves.hasAny() && !(await this.ui.confirm('Empezar una nueva partida no borra tus guardados, pero el autoguardado se sobrescribirá con la nueva carrera.', 'Continuar', false))) return;
-    const name = h('input', { type: 'text', value: 'Josué Navarro', maxlength: 28, style: { width: '100%', fontSize: '18px', padding: '10px' } });
-    const el = h('div', { class: 'screen' }, h('div', { class: 'panel confirm', style: { width: '520px', textAlign: 'left' } },
+    const name = h('input', { type: 'text', value: this.draftName || 'Josué Navarro', maxlength: 28, style: { width: '100%', fontSize: '18px', padding: '10px' }, oninput: (e) => { this.draftName = e.target.value; } });
+    const picker = cardPhotoPicker(this.ui, this.draftPhoto, (v) => { this.draftPhoto = v; });
+    const el = h('div', { class: 'screen' }, h('div', { class: 'panel confirm', style: { width: '560px', textAlign: 'left' } },
       h('div', { class: 'h2' }, 'Nueva carrera'), h('div', { class: 'muted', style: { marginBottom: '14px' } }, 'Tu nombre aparecerá en la acreditación y en los créditos de tus fotos.'),
-      name, h('div', { class: 'acts', style: { justifyContent: 'flex-end' } }, h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver'),
-        h('button', { class: 'btn primary', onclick: () => { const nm = name.value.trim() || 'Fotógrafo'; openCustomizer(g, { title: `${nm}: tu fotógrafo`, confirm: 'Comenzar carrera →', onBack: () => this.newGameDialog(), onDone: (look) => g.newGame(nm, look) }); } }, 'Siguiente: apariencia →'))));
+      name, h('div', { style: { marginTop: '14px' } }, picker),
+      h('div', { class: 'acts', style: { justifyContent: 'flex-end' } }, h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver'),
+        h('button', { class: 'btn primary', onclick: () => { const nm = name.value.trim() || 'Fotógrafo'; const photo = this.draftPhoto || null; openCustomizer(g, { title: `${nm}: tu fotógrafo`, confirm: 'Comenzar carrera →', onBack: () => this.newGameDialog(), onDone: (look) => { this.draftName = null; this.draftPhoto = null; g.newGame(nm, look, photo); } }); } }, 'Siguiente: apariencia →'))));
     this.ui.openScreen('newgame', el); setTimeout(() => name.focus(), 50);
   }
   loadMenu(fromPause = false) {
@@ -143,7 +146,8 @@ export class Screens {
           field('Duración de cada tiempo', sel('halfSeconds', [[150, 'Corto (2,5 min)'], [240, 'Normal (4 min)'], [360, 'Largo (6 min)'], [540, 'Extendido (9 min)']])),
           field('Cámara', sel('camera', Object.values(CAMERAS).map((c) => [c.id, c.name]))),
           field('Lente inicial (los demás van en la mochila)', sel('lens', lenses)),
-          field('Empezar en', sel('start', [['early', 'Llegar 2,5 h antes (estadio vacío que se va llenando)'], ['warmup', 'Calentamiento y salida de los equipos'], ['kickoff', 'Directo al saque inicial']]))),
+          field('Empezar en', sel('start', [['early', 'Llegar 2,5 h antes (estadio vacío que se va llenando)'], ['warmup', 'Calentamiento y salida de los equipos'], ['kickoff', 'Directo al saque inicial']])),
+          h('div', { class: 'card' }, cardPhotoPicker(this.ui, (() => { try { return localStorage.getItem('entrelineas.arcadePhoto'); } catch (e) { return null; } })(), (v) => { try { v ? localStorage.setItem('entrelineas.arcadePhoto', v) : localStorage.removeItem('entrelineas.arcadePhoto'); } catch (e) { g.ui.toast('No se pudo guardar la foto en este navegador.', 'warn'); } }))),
         h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px', gap: '10px', flexWrap: 'wrap' } },
           h('div', { class: 'teams', style: { fontSize: '20px' } }, this.ui.crest(TEAMS[cfg.home], 40), TEAMS[cfg.home].name, h('span', { class: 'muted' }, ' vs '), this.ui.crest(TEAMS[cfg.away], 40), TEAMS[cfg.away].name),
           h('div', { style: { display: 'flex', gap: '8px' } }, h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver'),
@@ -298,6 +302,7 @@ export class Screens {
     body.append(h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' } },
       h('div', { class: 'card' }, h('div', { class: 'h2' }, g.playerName), h('div', { class: 'muted' }, `${c.title} · ${CONTRACTS.find((x) => x.id === c.contract).name}`),
         h('button', { class: 'btn small primary', style: { marginTop: '10px' }, onclick: () => openCustomizer(g, { title: 'Personalizar apariencia', confirm: 'Guardar apariencia', onBack: () => this.pause('perfil'), onDone: (look) => { g.player.applyLook(look); g.saves.save('auto'); g.ui.toast('Apariencia actualizada', 'good'); this.pause('perfil'); } }) }, '🎨 Personalizar apariencia'),
+        h('div', { style: { margin: '14px 0 6px', paddingTop: '12px', borderTop: '1px solid var(--line)' } }, cardPhotoPicker(this.ui, g.cardPhoto, (v) => { g.cardPhoto = v; if (!g.arcade) g.saves.save('auto'); })),
         h('div', { style: { margin: '14px 0 4px', display: 'flex', justifyContent: 'space-between' } }, h('span', {}, 'Reputación'), h('b', {}, `${Math.round(c.reputation)} / 100`)),
         h('div', { class: 'repbar' }, h('i', { style: { width: c.reputation + '%' } })), next ? h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '4px' } }, `Siguiente título: ${next[1]} (${next[0]})`) : null,
         ...[['Dinero', formatMoney(c.money)], ['Eventos cubiertos', st.events], ['Fotos tomadas', g.photos.records.length], ['Fotos entregadas', st.delivered], ['Mejor puntuación', Math.round(st.best)], ['Posibles portadas', st.covers], ['Ingresos totales', formatMoney(st.earned)], ['Infracciones', st.infractions]].map(([k, v]) => h('div', { class: 'stat' }, h('span', {}, k), h('b', {}, v)))),
@@ -357,9 +362,14 @@ export class Screens {
       h('div', { style: { marginTop: '14px' } }, h('button', { class: 'btn', onclick: () => this.loadMenu(true) }, 'Cargar partida…')));
   }
   // ================= CREDENCIAL =================
-  credential(onClose) {
-    const c = h('canvas'); drawCredential(c, this.game);
-    const el = h('div', { class: 'screen' }, h('div', { class: 'cred-wrap' }, c, h('div', { class: 'muted' }, 'La acreditación se guardó en tu inventario.'),
+  async credential(onClose) {
+    const g = this.game;
+    await cardImage(g.cardPhoto);
+    const c = h('canvas'); drawCredential(c, g);
+    const redraw = async () => { await cardImage(g.cardPhoto); drawCredential(c, g); };
+    const photoBtn = g.inventory.credential?.cup ? null : h('details', { class: 'cred-photo' }, h('summary', {}, g.cardPhoto ? '📷 Cambiar la foto del carnet' : '📷 Agregar una foto al carnet'),
+      cardPhotoPicker(this.ui, g.cardPhoto, async (v) => { g.cardPhoto = v; await redraw(); if (!g.arcade) g.saves.save('auto'); }));
+    const el = h('div', { class: 'screen' }, h('div', { class: 'cred-wrap' }, c, h('div', { class: 'muted' }, 'La acreditación se guardó en tu inventario.'), photoBtn,
       h('button', { class: 'btn primary', onclick: () => { this.ui.closeScreen(); onClose?.(); } }, 'Guardar acreditación')));
     this.ui.openScreen('credential', el);
   }

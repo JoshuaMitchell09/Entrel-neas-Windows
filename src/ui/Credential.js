@@ -1,3 +1,4 @@
+import { cardImageSync } from './CardPhoto.js';
 import { crestCanvas } from '../gfx/Textures.js';
 
 // Dibuja una acreditación de prensa realista en un canvas.
@@ -17,14 +18,22 @@ export function drawCredential(c, game) {
   ctx.fillStyle = hd; ctx.fillRect(0, 40, W, 108);
   ctx.fillStyle = '#f2c500'; ctx.fillRect(0, 148, W, 6);
   ctx.fillStyle = '#fff'; ctx.font = '900 30px Arial Black, Arial'; ctx.fillText(off ? off.short + ' · STAFF' : 'LIGA TICA', 24, 84);
-  ctx.font = '600 14px Arial'; ctx.fillStyle = '#e8eefc'; ctx.fillText(off ? off.name.toUpperCase() : ({ segunda: 'SEGUNDA DIVISIÓN', menores: 'LIGAS MENORES · TORNEO JUVENIL' }[cr.league] || 'PRIMERA DIVISIÓN') + ' · TEMPORADA 2026', 24, 108);
+  ctx.font = '600 14px Arial'; ctx.fillStyle = '#e8eefc'; ctx.fillText(off ? off.name.toUpperCase() : ({ segunda: 'SEGUNDA DIVISIÓN', menores: 'LIGAS MENORES · TORNEO JUVENIL' }[cr.league] || 'PRIMERA DIVISIÓN') + ' · TEMPORADA 2026', 24, 108, cr.home ? W - 186 : W - 48);
   ctx.font = '700 12px Arial'; ctx.fillStyle = '#f2c500'; ctx.fillText(off ? 'PERSONAL DEL CLUB · ACCESO TOTAL' : 'ACREDITACIÓN OFICIAL', 24, 132);
   if (cr.home) { ctx.drawImage(crestCanvas(game.team(cr.home), 64), W - 150, 58); ctx.drawImage(crestCanvas(game.team(cr.away), 64), W - 80, 58); }
-  // Foto (silueta)
+  // Foto del fotógrafo (la que subió al crear la carrera) o silueta
+  const ph = cardImageSync(game.cardPhoto);
   round(ctx, 24, 176, 130, 160, 8); ctx.fillStyle = '#cfd8e6'; ctx.fill();
-  ctx.fillStyle = '#7a8aa3'; ctx.beginPath(); ctx.arc(89, 236, 30, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(89, 330, 52, 54, 0, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = '#0b3d91'; ctx.fillRect(48, 300, 82, 10);
+  if (ph) {
+    ctx.save(); round(ctx, 24, 176, 130, 160, 8); ctx.clip(); ctx.drawImage(ph, 24, 176, 130, 160); ctx.restore();
+    ctx.strokeStyle = 'rgba(10,15,28,.25)'; ctx.lineWidth = 1; round(ctx, 24.5, 176.5, 129, 159, 8); ctx.stroke();
+    // Sello holográfico sobre la esquina de la foto (anti-falsificación)
+    ctx.globalAlpha = 0.35; ctx.fillStyle = '#9dfcff'; ctx.beginPath(); ctx.arc(140, 322, 20, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle = '#7a8aa3'; ctx.beginPath(); ctx.arc(89, 236, 30, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(89, 330, 52, 54, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#0b3d91'; ctx.fillRect(48, 300, 82, 10);
+  }
   // Datos
   ctx.fillStyle = '#0a0f1c'; ctx.font = '800 22px Arial'; wrap(ctx, (game.playerName || 'Fotógrafo').toUpperCase(), 172, 200, 230, 24);
   ctx.font = '600 13px Arial'; ctx.fillStyle = '#56627a';
