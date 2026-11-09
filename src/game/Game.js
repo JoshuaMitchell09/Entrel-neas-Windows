@@ -110,7 +110,7 @@ export class Game {
     });
     E.on('match:save', () => this.audio.groan());
     E.on('match:event', (ev) => { if (ev.type === 'remate') setTimeout(() => { if (this.match && !this.match.events.some((e) => e.type === 'gol' && e.t > ev.t)) this.audio.groan(); }, 1300); });
-    E.on('match:end', () => this.story.onMatchEnd());
+    E.on('match:end', () => { this.audio.applause?.(1); this.story.onMatchEnd(); });
     E.on('env:label', () => this.post?.configure());
     E.on('battery:empty', () => { this.ui.toast('¡Batería agotada! Presioná B para cambiarla.', 'bad', 4000); if (this.photoMode.active) this.photoMode.exit(); });
     E.on('photo:taken', (rec) => { this.career.stats.photos++; });

@@ -73,12 +73,35 @@ export class AudioEngine {
     const rms = Math.sqrt(sum / Math.max(1, n)) || 0.05;
     return Math.min(4, Math.max(0.15, target / rms));
   }
+  // Sonidos incluidos con el juego (public/sounds, licencia CC0: ver public/sounds/CREDITOS.txt)
+  async fetchBundled(name) {
+    try {
+      const r = await fetch(`sounds/${name}.mp3`); const type = r.headers.get('content-type') || '';
+      if (!r.ok || type.includes('text/html')) return null;
+      return await this.decode(await r.arrayBuffer());
+    } catch (e) { return null; }
+  }
+  async loadBundled() {
+    if (this.bundled) return this.bundled;
+    const B = {};
+    for (const k of ['goal', 'ooh', 'applause', 'crowd_1', 'crowd_2']) B[k] = await this.fetchBundled(k);
+    B.crowd = [B.crowd_1, B.crowd_2].filter(Boolean);
+    this.bundled = B; return B;
+  }
+  playBundled(name, gain = 1, dest = this.crowdFilter, delay = 0) {
+    const b = this.bundled?.[name]; if (!b || !this.ctx) return;
+    const src = this.ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = 0.96 + Math.random() * 0.08;
+    const g = this.ctx.createGain(); g.gain.value = gain * this.normGain(b, 0.14); src.connect(g); g.connect(dest); src.start(this.ctx.currentTime + delay);
+  }
   async loadCustomAudio() {
-    // Música de inicio
+    // Música de inicio: la del jugador (si la puso) o la incluida con el juego
     let menu = null; const mb = await this.storedBlob('menu');
     if (mb) menu = await this.decode(await mb.arrayBuffer());
     if (!menu) menu = await this.fetchAudio('menu');
+    this.menuIsCustom = !!menu;
+    if (!menu) menu = await this.fetchBundled('menu');
     this.setMenu(menu);
+    await this.loadBundled();
     this.listCache = {}; this.counts = {};
     for (const key of Object.keys(AudioEngine.CUSTOM)) if (key !== 'menu') this.counts[key] = (await this.loadList(key)).length;
     this.applyStadium();
@@ -96,7 +119,10 @@ export class AudioEngine {
   setStadium(id) { this.stadiumId = id; if (this.listCache) this.applyStadium(); }
   applyStadium() {
     const own = this.stadiumId && this.listCache['estadio_' + this.stadiumId];
-    const list = own && own.length ? own : this.listCache.estadio || [];
+    let list = own && own.length ? own : this.listCache.estadio || [];
+    // Sin grabaciones del jugador: ambiente de multitud incluido (capa base bajo el público sintético)
+    this.crowdIsBundled = !list.length && !!this.bundled?.crowd?.length;
+    if (this.crowdIsBundled) list = this.bundled.crowd;
     if (this.crowdSource === list) return;
     this.crowdSource = list; this.setCrowdList(list);
   }
@@ -112,7 +138,7 @@ export class AudioEngine {
     if (!this.customCrowd) { this.customCrowd = this.ctx.createGain(); this.customCrowd.gain.value = 0; this.customCrowd.connect(this.crowdFilter); }
     this.crowdList = list.map((b) => ({ buf: b, norm: this.normGain(b) }));
     this.crowdPlayer = { cur: null, order: [], next: 0 };
-    if (list.length) this.custom.crowd = { count: list.length }; else delete this.custom.crowd;
+    if (list.length) this.custom.crowd = { count: list.length, bundled: !!this.crowdIsBundled }; else delete this.custom.crowd;
     this.game.events?.emit('audio:custom', 'estadio');
   }
   // Encadena grabaciones con fundido cruzado, en orden aleatorio sin repetir seguidas.
@@ -136,7 +162,7 @@ export class AudioEngine {
     const bufs = [];
     for (const f of files) { const b = await this.decode(await f.arrayBuffer()); if (b) bufs.push([f, b]); }
     if (!bufs.length) return false;
-    if (key === 'menu') { await this.storeBlob('menu', bufs[0][0]); this.setMenu(bufs[0][1]); }
+    if (key === 'menu') { await this.storeBlob('menu', bufs[0][0]); this.menuIsCustom = true; this.setMenu(bufs[0][1]); }
     else {
       const prev = (await this.storedBlob(key)) || [];
       await this.storeBlob(key, [...prev, ...bufs.map(([f]) => f)]);
@@ -147,11 +173,11 @@ export class AudioEngine {
   }
   async clearFile(key) {
     await this.storeBlob(key, null);
-    if (key === 'menu') { this.setMenu(await this.fetchAudio('menu')); return; }
+    if (key === 'menu') { const m = await this.fetchAudio('menu'); this.menuIsCustom = !!m; this.setMenu(m || await this.fetchBundled('menu')); return; }
     delete this.listCache[key]; this.counts[key] = (await this.loadList(key)).length; this.crowdSource = null; this.applyStadium();
   }
-  countFor(key) { return key === 'menu' ? (this.custom.menu ? 1 : 0) : this.counts?.[key] || 0; }
-  hasCustom(key) { return key === 'menu' ? !!this.custom?.menu : this.countFor(key) > 0; }
+  countFor(key) { return key === 'menu' ? (this.menuIsCustom ? 1 : 0) : this.counts?.[key] || 0; }
+  hasCustom(key) { return key === 'menu' ? !!this.menuIsCustom : this.countFor(key) > 0; }
   applyVolumes() {
     if (!this.ctx) return;
     const s = this.game.settings.data;
@@ -201,10 +227,10 @@ export class AudioEngine {
     this.crowdFilter.frequency.setTargetAtTime(inStadiumBowl ? 9000 : interior ? 520 : 900, this.ctx.currentTime, 0.3);
     this.revGain.gain.setTargetAtTime(interior ? 0.5 : inStadiumBowl ? 0.18 : 0.08, this.ctx.currentTime, 0.4);
     this.crowdBus.gain.setTargetAtTime(crowdLvl * (clasico ? 1.25 : 1), this.ctx.currentTime, 0.5);
-    const menu = this.custom?.menu, customCrowd = !!this.custom?.crowd;
-    if (customCrowd) { this.crowdTick(); this.customCrowd.gain.setTargetAtTime((st.menu ? 0.35 : 0.8 + excite * 0.55), this.ctx.currentTime, 0.6); }
+    const menu = this.custom?.menu, bundledCrowd = !!this.custom?.crowd?.bundled, customCrowd = !!this.custom?.crowd && !bundledCrowd;
+    if (this.custom?.crowd) { this.crowdTick(); this.customCrowd.gain.setTargetAtTime(bundledCrowd ? (st.menu ? 0.3 : 0.55 + excite * 0.35) : (st.menu ? 0.35 : 0.8 + excite * 0.55), this.ctx.currentTime, 0.6); }
     if (menu) menu.g.gain.setTargetAtTime(st.menu ? 0.9 * menu.norm : 0, this.ctx.currentTime, st.menu ? 0.8 : 0.5);
-    this.setGain(this.crowdBed, (0.22 + excite * 0.35) * (customCrowd ? 0.3 : 1), 0.3);
+    this.setGain(this.crowdBed, (0.22 + excite * 0.35) * (customCrowd ? 0.3 : bundledCrowd ? 0.75 : 1), 0.3);
     this.setGain(this.crowdRoar, Math.max(0, excite - 0.35) * 0.55, 0.15);
     this.crowdRoar.f.frequency.setTargetAtTime(1100 + excite * 900, this.ctx.currentTime, 0.2);
     this.setGain(this.cityBed, city ? (inStadiumBowl ? 0.05 : interior ? 0.08 : 0.35) : 0, 1);
@@ -212,7 +238,7 @@ export class AudioEngine {
     this.setGain(this.windBed, interior ? 0.02 : 0.08 + (weather === 'rain' ? 0.08 : 0), 1);
     // Cánticos y bombo de la barra
     if (crowd && crowdLvl > 0.05) {
-      this.nextChant -= dt * (1 + excite * 2 + (clasico ? 1 : 0)) * (this.custom?.crowd ? 0.2 : 1);
+      this.nextChant -= dt * (1 + excite * 2 + (clasico ? 1 : 0)) * (this.custom?.crowd && !this.custom.crowd.bundled ? 0.2 : 1);
       if (this.nextChant <= 0) { this.chant(); this.nextChant = rand(18, 34); this.chanting = 9; }
       if (this.chanting > 0 || clasico || excite > 0.5) {
         this.chanting -= dt; this.nextDrum -= dt;
@@ -310,8 +336,10 @@ export class AudioEngine {
     const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.5;
     const g = ctx.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.9 * k, t0 + 0.4); g.gain.exponentialRampToValueAtTime(0.001, t0 + 7);
     s.connect(f); f.connect(g); g.connect(this.crowdFilter); s.start(t0); s.stop(t0 + 7.2);
+    this.playBundled('goal', 1.3 * k);
   }
-  groan() { if (!this.ctx) return; const ctx = this.ctx, t0 = ctx.currentTime; const s = ctx.createBufferSource(); s.buffer = this.noise; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(700, t0); f.frequency.linearRampToValueAtTime(380, t0 + 1.4); const g = ctx.createGain(); this.env(g, t0, 0.15, 0.5, 1.6); s.connect(f); f.connect(g); g.connect(this.crowdFilter); s.start(t0); s.stop(t0 + 2); }
+  applause(k = 1) { this.playBundled('applause', 0.9 * k); }
+  groan() { if (!this.ctx) return; const ctx = this.ctx, t0 = ctx.currentTime; const s = ctx.createBufferSource(); s.buffer = this.noise; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(700, t0); f.frequency.linearRampToValueAtTime(380, t0 + 1.4); const g = ctx.createGain(); this.env(g, t0, 0.15, 0.5, 1.6); s.connect(f); f.connect(g); g.connect(this.crowdFilter); s.start(t0); s.stop(t0 + 2); this.playBundled('ooh', 1.1); }
   bird() { const f = rand(2500, 4200); for (let i = 0; i < 3; i++) this.tone(this.amb, 'sine', f, f * rand(1.2, 1.5), 0.08, 0.02, i * 0.12); }
   cricket() { for (let i = 0; i < 4; i++) this.tone(this.amb, 'square', 4200, 4300, 0.03, 0.008, i * 0.06); }
   // Conversación (murmullo con formantes) en una posición del mundo.

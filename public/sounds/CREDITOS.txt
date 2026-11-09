@@ -1,0 +1,20 @@
+SONIDOS INCLUIDOS EN "ENTRE LÍNEAS"
+===================================
+Todos son de dominio público (CC0 1.0): se pueden usar, modificar y distribuir sin pedir permiso
+ni dar crédito. Igual se acredita a sus autores por cortesía. Los archivos se recortaron,
+se igualaron de volumen y se convirtieron a MP3 para el juego.
+
+menu.mp3      "Diamond Race" — iamoneabe (OpenGameArt) — CC0
+              https://opengameart.org/content/diamond-race
+crowd_1.mp3   "Large crowd, medium distance (stereo)" — eguobyte (Wikimedia Commons) — CC0
+              https://commons.wikimedia.org/wiki/File:360703_eguobyte_large-crowd-medium-distance-stereo.wav
+crowd_2.mp3   "Crowd Shouting/Speaking Ambience" — StarNinjas (OpenGameArt) — CC0
+              https://opengameart.org/content/crowd-shoutingspeaking-ambience
+goal.mp3      Mezcla de "Crowd Shouting/Speaking Ambience" (StarNinjas) y
+              "Applause in a large hall or church" — eXpl0it3r (OpenGameArt) — CC0
+              https://opengameart.org/content/applause-in-a-large-hall-or-church
+applause.mp3  "Applause in a large hall or church" — eXpl0it3r (OpenGameArt) — CC0
+ooh.mp3       "OoOoOoOoOoOoOo" — Nocturnal_Vanguard (OpenGameArt) — CC0
+              https://opengameart.org/content/oooooooooooooo
+
+Licencia CC0 1.0: https://creativecommons.org/publicdomain/zero/1.0/deed.es

@@ -108,6 +108,7 @@ export class Screens {
       h('p', {}, 'ENTRE LÍNEAS: Fotógrafo de la Liga Tica — simulador de fotografía deportiva.'),
       h('p', {}, h('b', {}, `Autor: ${AUTHOR}`), h('br'), h('span', { class: 'muted' }, `${COPYRIGHT} Versión ${VERSION}.`)),
       h('p', { class: 'muted' }, 'Todo el contenido (estadios, clubes, jugadores, marcas, texturas y sonidos) es ficticio y se genera proceduralmente en tiempo real. Motor: Three.js (WebGL) + WebAudio.'),
+      h('p', { class: 'muted', style: { fontSize: '12px' } }, 'Música y ambiente de dominio público (CC0): «Diamond Race» de iamoneabe · multitud de eguobyte (Wikimedia Commons) · StarNinjas, eXpl0it3r y Nocturnal_Vanguard (OpenGameArt). Detalle en sounds/CREDITOS.txt.'),
       h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver')));
     this.ui.openScreen('credits', el);
   }
@@ -332,12 +333,12 @@ export class Screens {
         h('div', { class: 'h3', style: { marginTop: '14px' } }, 'Tus sonidos'),
         h('div', { class: 'muted', style: { fontSize: '12px', marginBottom: '6px' } }, 'Usá audios propios o con permiso (MP3, M4A, OGG o WAV). Se guardan en este navegador; también podés ponerlos en la carpeta public/audio.'),
         ...Object.entries(AudioEngine.CUSTOM).map(([key, def]) => {
-          const status = h('span', { class: 'muted', style: { fontSize: '12px', marginRight: '6px' } }, g.audio.hasCustom(key) ? (def.multi ? `✔ ${g.audio.countFor(key)} grabación(es)` : '✔ cargado') : 'sin archivo');
+          const status = h('span', { class: 'muted', style: { fontSize: '12px', marginRight: '6px' } }, g.audio.hasCustom(key) ? (def.multi ? `✔ ${g.audio.countFor(key)} grabación(es)` : '✔ cargado') : (['menu', 'estadio'].includes(key) ? 'usando el incluido (CC0)' : 'sin archivo'));
           const inp = h('input', { type: 'file', accept: 'audio/*,video/mp4', multiple: def.multi ? true : null, style: { display: 'none' } });
           inp.addEventListener('change', async () => { const f = def.multi ? inp.files : inp.files[0]; if (!f || (def.multi && !f.length)) return; status.textContent = 'cargando…'; const ok = await g.audio.loadFile(key, f); status.textContent = ok ? (def.multi ? `✔ ${g.audio.countFor(key)} grabación(es)` : '✔ ' + f.name.slice(0, 22)) : '✖ formato no válido'; g.ui.toast(ok ? `${def.label}: listo` : 'No se pudo leer ese audio.', ok ? 'good' : 'warn'); });
           return row(def.label, h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' } }, status, inp,
             h('button', { class: 'btn small', onclick: () => inp.click() }, def.multi ? 'Agregar…' : 'Elegir…'),
-            h('button', { class: 'btn small', onclick: async () => { await g.audio.clearFile(key); status.textContent = 'sin archivo'; } }, 'Quitar')));
+            h('button', { class: 'btn small', onclick: async () => { await g.audio.clearFile(key); status.textContent = ['menu', 'estadio'].includes(key) ? 'usando el incluido (CC0)' : 'sin archivo'; } }, 'Quitar')));
         }),
         h('div', { class: 'h3', style: { marginTop: '14px' } }, 'Partido'), row('Duración de cada tiempo', sel('halfSeconds', [[150, 'Corto (2,5 min)'], [240, 'Normal (4 min)'], [360, 'Largo (6 min)'], [540, 'Extendido (9 min)']]))),
       h('div', {}, h('div', { class: 'h3' }, 'Teclas'), keys)));
