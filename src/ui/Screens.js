@@ -108,6 +108,7 @@ export class Screens {
       h('p', {}, 'ENTRE LÍNEAS: Fotógrafo de la Liga Tica — simulador de fotografía deportiva.'),
       h('p', {}, h('b', {}, `Autor: ${AUTHOR}`), h('br'), h('span', { class: 'muted' }, `${COPYRIGHT} Versión ${VERSION}.`)),
       h('p', { class: 'muted' }, 'Todo el contenido (estadios, clubes, jugadores, marcas, texturas y sonidos) es ficticio y se genera proceduralmente en tiempo real. Motor: Three.js (WebGL) + WebAudio.'),
+      h('p', { style: { fontSize: '12px' } }, h('b', {}, 'Sonidos de afición: '), '«Free Crowd Cheering Sounds» de Gregor Quendel (gregorquendel.com), licencia CC BY 4.0 (creativecommons.org/licenses/by/4.0). Recortados, normalizados y convertidos a MP3.'),
       h('p', { class: 'muted', style: { fontSize: '12px' } }, 'Música y ambiente de dominio público (CC0): «Diamond Race» de iamoneabe · multitud de eguobyte (Wikimedia Commons) · StarNinjas, eXpl0it3r y Nocturnal_Vanguard (OpenGameArt). Detalle en sounds/CREDITOS.txt.'),
       h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver')));
     this.ui.openScreen('credits', el);

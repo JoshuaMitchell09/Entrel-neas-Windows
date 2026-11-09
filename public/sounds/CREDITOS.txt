@@ -1,8 +1,16 @@
 SONIDOS INCLUIDOS EN "ENTRE LÍNEAS"
 ===================================
-Todos son de dominio público (CC0 1.0): se pueden usar, modificar y distribuir sin pedir permiso
-ni dar crédito. Igual se acredita a sus autores por cortesía. Los archivos se recortaron,
-se igualaron de volumen y se convirtieron a MP3 para el juego.
+Los archivos se recortaron, se igualaron de volumen, se les agregaron fundidos y se convirtieron
+a MP3 para el juego.
+
+--- CC BY 4.0 (requiere dar crédito) -------------------------------------------------------------
+crowd_3.mp3, crowd_4.mp3, crowd_5.mp3, chant_1.mp3, chant_2.mp3, chant_3.mp3, goal_1.mp3, goal_2.mp3
+              «Free Crowd Cheering Sounds» — Gregor Quendel — www.gregorquendel.com
+              https://opengameart.org/content/free-crowd-cheering-sounds
+              Licencia CC BY 4.0: https://creativecommons.org/licenses/by/4.0/deed.es
+              Cambios: recortes, normalización de volumen, fundidos y conversión a MP3.
+
+--- CC0 1.0 (dominio público: no requiere crédito, se acredita por cortesía) ---------------------
 
 menu.mp3      "Diamond Race" — iamoneabe (OpenGameArt) — CC0
               https://opengameart.org/content/diamond-race

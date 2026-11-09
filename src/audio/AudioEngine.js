@@ -84,8 +84,11 @@ export class AudioEngine {
   async loadBundled() {
     if (this.bundled) return this.bundled;
     const B = {};
-    for (const k of ['goal', 'ooh', 'applause', 'crowd_1', 'crowd_2']) B[k] = await this.fetchBundled(k);
-    B.crowd = [B.crowd_1, B.crowd_2].filter(Boolean);
+    const names = ['goal', 'goal_1', 'goal_2', 'ooh', 'applause', 'crowd_1', 'crowd_2', 'crowd_3', 'crowd_4', 'crowd_5', 'chant_1', 'chant_2', 'chant_3'];
+    for (const k of names) B[k] = await this.fetchBundled(k);
+    B.crowd = ['crowd_1', 'crowd_2', 'crowd_3', 'crowd_4', 'crowd_5'].map((k) => B[k]).filter(Boolean);
+    B.chants = ['chant_1', 'chant_2', 'chant_3'].filter((k) => B[k]);
+    B.goals = ['goal_1', 'goal_2', 'goal'].filter((k) => B[k]);
     this.bundled = B; return B;
   }
   playBundled(name, gain = 1, dest = this.crowdFilter, delay = 0) {
@@ -315,6 +318,8 @@ export class AudioEngine {
   drum(v) { this.tone(this.crowdFilter, 'sine', 95, 45, 0.25, 0.5 * v); this.noiseHit(this.crowdFilter, 0.06, 'lowpass', 400, 1, 0.3 * v); }
   // Cántico: coro de voces sintéticas con filtros de formantes.
   chant() {
+    // Cánticos grabados de la afición (Gregor Quendel, CC-BY 4.0) alternados con los sintéticos
+    const C = this.bundled?.chants; if (C?.length && !(this.custom?.crowd && !this.custom.crowd.bundled) && Math.random() < 0.7) { this.playBundled(C[Math.floor(Math.random() * C.length)], 0.8 + this.excite * 0.6); return; }
     const ctx = this.ctx, base = ctx.currentTime + 0.1;
     const melody = [[0, 0.4], [0, 0.4], [3, 0.4], [5, 0.8], [3, 0.4], [0, 0.8], [-2, 0.4], [0, 1.2]];
     const root = 196 * Math.pow(2, Math.floor(rand(-2, 3)) / 12);
@@ -336,7 +341,7 @@ export class AudioEngine {
     const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.5;
     const g = ctx.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.9 * k, t0 + 0.4); g.gain.exponentialRampToValueAtTime(0.001, t0 + 7);
     s.connect(f); f.connect(g); g.connect(this.crowdFilter); s.start(t0); s.stop(t0 + 7.2);
-    this.playBundled('goal', 1.3 * k);
+    const G = this.bundled?.goals || []; if (G.length) this.playBundled(G[Math.floor(Math.random() * G.length)], 1.4 * k);
   }
   applause(k = 1) { this.playBundled('applause', 0.9 * k); }
   groan() { if (!this.ctx) return; const ctx = this.ctx, t0 = ctx.currentTime; const s = ctx.createBufferSource(); s.buffer = this.noise; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(700, t0); f.frequency.linearRampToValueAtTime(380, t0 + 1.4); const g = ctx.createGain(); this.env(g, t0, 0.15, 0.5, 1.6); s.connect(f); f.connect(g); g.connect(this.crowdFilter); s.start(t0); s.stop(t0 + 2); this.playBundled('ooh', 1.1); }

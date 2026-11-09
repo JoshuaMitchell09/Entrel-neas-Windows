@@ -1,14 +1,14 @@
 import { h } from './dom.js';
 
 // Notas de la versión: se muestran al abrir el juego cuando hay una versión nueva (y desde «Novedades» en el menú).
-export const VERSION = '0.9.1';
+export const VERSION = '0.9.2';
 export const AUTHOR = 'MitchellsVisuals';
 export const COPYRIGHT = `© ${new Date().getFullYear()} ${AUTHOR}. Todos los derechos reservados.`;
 
 export const CHANGELOG = {
   date: 'Noviembre 2026',
   news: [
-    ['🎵', 'Música y ambiente de estadio', 'Música de inicio nueva y grabaciones reales de multitud, festejo de gol, aplausos y el «uuuh» del público (todo de dominio público).'],
+    ['🎵', 'Música y ambiente de estadio', 'Música de inicio nueva y grabaciones reales de la afición: cánticos, festejo de gol, aplausos y el «uuuh» del público. Sonidos de afición de Gregor Quendel (CC BY 4.0).'],
     ['🏟️', 'Segunda División', 'Todos los partidos en el Estadio El Llano: gradería techada a la calle, sintética rayada y postes de luz.'],
     ['⚽', 'Ligas menores', 'Partidos U-17 y U-15 en los complejos La Cantera y Centro de Alto Rendimiento Rojinegro, con canchas de entrenamiento alrededor.'],
     ['📷', 'Segunda cámara', 'Llevá dos cuerpos con lentes distintos y cambiá al instante con T (o L3 en el visor).'],
