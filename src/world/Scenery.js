@@ -39,23 +39,28 @@ export class Scenery {
     const walls = ['#e9d8a6', '#f4a261', '#a8dadc', '#ffffff', '#d8f3dc', '#ffd6a5', '#cdb4db', '#e0e0e0', '#b5e48c'];
     const roofC = ['#9a3412', '#b45309', '#8d99ae', '#9aa1a8', '#7f1d1d', '#a8adb3'];
     let n = 0, t = 0;
-    while (n < N) {
+    // Zonas ocupadas por la ciudad: calle y plaza del estadio + la avenida hasta el barrio (con margen)
+    const P = this.game.city?.P ?? 97, gz = this.game.city?.gz ?? 63;
+    const busy = (x, z, m = 0) => (z > gz - 5 - m && z < P + 60 + m && x > -840 - m && x < 240 + m);
+    let guard = 0;
+    while (n < N && guard++ < N * 20) {
       const a = rnd() * Math.PI * 2, r = keepOut + 40 + Math.pow(rnd(), 0.7) * 1050;
       const x = center.x + Math.cos(a) * r, z = center.z + Math.sin(a) * r;
-      if (z > 60 && z < 260 && Math.abs(x) < 220) continue; // la calle y la plaza ya existen
+      if (busy(x, z, 12)) continue; // la calle, la plaza y la avenida ya existen
       const w = 7 + rnd() * 9, dd = 7 + rnd() * 10, hgt = rnd() < 0.85 ? 3.5 + rnd() * 3 : 9 + rnd() * 22;
       d.position.set(x, 0, z); d.rotation.set(0, Math.round(rnd() * 4) * Math.PI / 2 + (rnd() - 0.5) * 0.2, 0); d.scale.set(w, hgt, dd); d.updateMatrix();
       houses.setMatrixAt(n, d.matrix); c.set(walls[Math.floor(rnd() * walls.length)]); if (night) c.multiplyScalar(0.5); houses.setColorAt(n, c);
       d.position.y = hgt; d.scale.set(w * 1.15, 2 + rnd() * 2, dd * 1.15); d.updateMatrix(); roofs.setMatrixAt(n, d.matrix); c.set(roofC[Math.floor(rnd() * roofC.length)]); roofs.setColorAt(n, c);
       n++;
-      if (t < 1800 && rnd() < 0.7) { const s = 3 + rnd() * 5; d.position.set(x + (rnd() - 0.5) * 20, s * 0.9, z + (rnd() - 0.5) * 20); d.rotation.set(0, rnd() * 6, 0); d.scale.set(s, s * 0.8, s); d.updateMatrix(); trees.setMatrixAt(t++, d.matrix); }
+      const tx = x + (rnd() - 0.5) * 20, tz = z + (rnd() - 0.5) * 20;
+      if (t < 1800 && rnd() < 0.7 && !busy(tx, tz, 8)) { const s = 3 + rnd() * 5; d.position.set(tx, s * 0.9, tz); d.rotation.set(0, rnd() * 6, 0); d.scale.set(s, s * 0.8, s); d.updateMatrix(); trees.setMatrixAt(t++, d.matrix); }
     }
-    trees.count = t;
+    trees.count = t; houses.count = n; roofs.count = n;
     for (const m of [houses, roofs, trees]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; m.receiveShadow = false; m.castShadow = false; m.frustumCulled = false; this.group.add(m); }
     // Luces de la ciudad de noche
     {
-      const P = 1600, pos = new Float32Array(P * 3);
-      for (let i = 0; i < P; i++) { const a = rnd() * Math.PI * 2, r = keepOut + 60 + rnd() * 1100; pos.set([center.x + Math.cos(a) * r, 2 + rnd() * 8, center.z + Math.sin(a) * r], i * 3); }
+      const NP = 1600, pos = new Float32Array(NP * 3);
+      for (let i = 0; i < NP; i++) { let x, z; do { const a = rnd() * Math.PI * 2, r = keepOut + 60 + rnd() * 1100; x = center.x + Math.cos(a) * r; z = center.z + Math.sin(a) * r; } while (busy(x, z, 10)); pos.set([x, 2 + rnd() * 8, z], i * 3); }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffd08a, size: 2.2, sizeAttenuation: false, fog: false }));
       this.group.add(pts); this.game.env.register(pts, 'visible', 0, 1);
