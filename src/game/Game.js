@@ -38,6 +38,7 @@ import { Travel } from '../world/Travel.js';
 import { Recorder } from '../cinema/Recorder.js';
 import { PhoneCam } from '../cinema/PhoneCam.js';
 import { clamp } from '../core/MathUtil.js';
+import { buildMenuCamera } from '../world/MenuCameraProp.js';
 
 export class Game {
   constructor(canvas) {
@@ -68,6 +69,28 @@ export class Game {
     window.addEventListener('pointerdown', () => this.audio.start(), { once: false });
     window.addEventListener('keydown', () => this.audio.start());
   }
+  // ---------------- Escena del menú principal: cámara sobre el césped, estadio de noche ----------------
+  enterMenuScene() {
+    if (!this.stadium) return;
+    if (!this.menuProp) this.menuProp = buildMenuCamera();
+    if (!this.menuProp.parent) { this.scene.add(this.menuProp); this.menuT = 0; }
+    if (this.env.time !== 'night' && !this.menuPrevEnv) { this.menuPrevEnv = [this.env.time, this.env.weather]; this.env.configure('night', 'clear', this.stadium.lightPositions); this.post?.configure(); }
+  }
+  leaveMenuScene() {
+    if (this.menuProp?.parent) this.scene.remove(this.menuProp);
+    if (this.menuPrevEnv && this.stadium) { const [t, w] = this.menuPrevEnv; this.env.configure(t, w, this.stadium.lightPositions); this.post?.configure(); }
+    this.menuPrevEnv = null;
+  }
+  updateMenuShot(dt) {
+    // Toma baja a ras de césped: la cámara 3D a la derecha del cuadro, la gradería iluminada detrás
+    const S = this.menuShotCfg || (this.menuShotCfg = { cam: [-6, 0.17, 26], yaw: 0.1, pitch: 0.05, d: 0.86, r: 0.3, rot: -1.05, fov: 38 });
+    const t = this.menuT, P = this.menuProp, c = this.camera;
+    const yaw = S.yaw + Math.sin(t * 0.07) * 0.025, fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
+    P.position.set(S.cam[0] + fx * S.d + rx * S.r, 0, S.cam[2] + fz * S.d + rz * S.r);
+    P.rotation.y = S.rot + Math.sin(t * 0.2) * 0.35;
+    c.position.set(S.cam[0] + rx * Math.sin(t * 0.13) * 0.04, S.cam[1] + Math.sin(t * 0.17) * 0.01, S.cam[2] + rz * Math.sin(t * 0.13) * 0.04);
+    c.lookAt(c.position.x + fx, S.cam[1] + Math.tan(S.pitch), c.position.z + fz); c.fov = S.fov; c.updateProjectionMatrix();
+  }
   team(id) { return TEAMS[id]; }
   teamName(id) { return TEAMS[id]?.name || id; }
   resize() {
@@ -94,6 +117,7 @@ export class Game {
   }
   // ---------------- Niveles ----------------
   disposeLevel() {
+    this.menuPrevEnv = null; if (this.menuProp?.parent) this.scene.remove(this.menuProp);
     this.match?.dispose(); this.match = null;
     for (const o of [this.stadium?.group, this.city?.group]) if (o) { this.scene.remove(o); o.traverse((c) => { if (c.isMesh || c.isLine || c.isPoints) { c.geometry?.dispose(); } }); }
     this.scenery?.dispose(); this.scenery = null;
@@ -342,15 +366,20 @@ export class Game {
       // Cámara orbital cinematográfica sobre el estadio
       this.menuT += dt;
       if (m) { m.update(dt); }
-      const a = this.menuT * 0.05;
-      this.camera.position.set(Math.cos(a) * 75, 22 + Math.sin(this.menuT * 0.1) * 4, Math.sin(a) * 52);
-      this.camera.lookAt(0, 2, 0); this.camera.fov = 50; this.camera.updateProjectionMatrix();
+      if (this.state === 'menu' && this.menuProp?.parent) this.updateMenuShot(dt);
+      else {
+        if (this.menuProp?.parent) this.leaveMenuScene();
+        const a = this.menuT * 0.05;
+        this.camera.position.set(Math.cos(a) * 75, 22 + Math.sin(this.menuT * 0.1) * 4, Math.sin(a) * 52);
+        this.camera.lookAt(0, 2, 0); this.camera.fov = 50; this.camera.updateProjectionMatrix();
+      }
       if (st) { st.update(dt, this.time, m?.excite || 0.2); const cu = st.crowd.uniforms; cu.uExcite.value = 0.25; cu.uFill.value = 1; cu.uNear.value = 0; cu.uAimAmt.value = 0; cu.uChant.value = 0.4; }
       this.env.update(dt, new THREE.Vector3(0, 0, 0), this.time);
       this.audio.update(dt, { inStadiumBowl: true, interior: false, distToStadium: 0, excite: 0.25, weather: this.env.weather, time: this.env.time, crowd: !!st, city: false, menu: true });
       this.player.root.visible = false;
       return;
     }
+    if (this.menuProp?.parent) this.leaveMenuScene();
     if (this.state !== 'play') { if (this.drone.active) this.drone.exit(); if (this.phoneCam.active) this.phoneCam.exit(); return; }
     this.handleInput();
     const paused = !!this.ui.screen;

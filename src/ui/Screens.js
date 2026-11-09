@@ -22,18 +22,57 @@ export class Screens {
   // ================= MENÚ PRINCIPAL =================
   mainMenu() {
     const g = this.game, has = g.saves.hasAny();
-    const el = h('div', { class: 'screen menu' },
-      h('div', { class: 'logo' }, h('div', { class: 'a' }, 'ENTRE'), h('div', { class: 'a' }, 'LÍNEAS'), h('div', { class: 'b' }, 'FOTÓGRAFO DE LA LIGA TICA')),
-      h('div', { class: 'tagline' }, '“El partido lo juegan ellos. La historia la capturás vos.”'),
-      h('div', { class: 'items' },
-        has ? h('button', { class: 'btn', onclick: () => g.continueGame() }, '▶  CONTINUAR') : null,
-        h('button', { class: 'btn', onclick: () => this.newGameDialog() }, '✚  NUEVA PARTIDA (CARRERA)'),
-        h('button', { class: 'btn', onclick: () => this.arcadeSetup() }, '◎  MODO ARCADE'),
-        has ? h('button', { class: 'btn', onclick: () => this.loadMenu() }, '⟳  CARGAR PARTIDA') : null,
-        h('button', { class: 'btn', onclick: () => this.settingsStandalone() }, '⚙  AJUSTES'),
-        h('button', { class: 'btn', onclick: () => this.credits() }, 'ⓘ  CRÉDITOS')),
-      h('div', { class: 'foot' }, 'v0.1 · Prototipo jugable · Clubes, estadios y marcas ficticias'));
+    g.enterMenuScene?.();
+    const items = [
+      has && { label: 'Continuar', desc: 'Retomá tu carrera donde la dejaste.', go: () => g.continueGame() },
+      { label: 'Carrera', desc: 'De novato a fotógrafo estrella de la Liga Tica.', go: () => this.newGameDialog() },
+      { label: 'Arcade', desc: 'Un partido rápido: elegí estadio, equipos, hora y clima.', go: () => this.arcadeSetup() },
+      has && { label: 'Cargar partida', desc: 'Abrí otra de tus partidas guardadas.', go: () => this.loadMenu() },
+      { label: 'Ajustes', desc: 'Gráficos, sonido, controles y accesibilidad.', go: () => this.settingsStandalone() },
+      { label: 'Créditos', desc: 'Quiénes hicieron este juego.', go: () => this.credits() },
+    ].filter(Boolean);
+    const news = [
+      { k: 'BIENVENIDA', t: '¡Bienvenido a Entre Líneas!', s: 'El partido lo juegan ellos. La historia la capturás vos.' },
+      { k: 'NUEVO', t: 'Copa Centroamericana', s: 'Acreditación especial, rivales de toda la región y noches de copa en la Cueva.' },
+      { k: 'CARRERA', t: 'Fotógrafo oficial del club', s: 'Si el titular se enferma, el editor te llama: vestuarios, palco y todo el estadio.' },
+      { k: 'MODO CINE', t: 'Grabá con el dron o el celular', s: 'Videos horizontales o verticales para presentar tus mejores tomas.' },
+      { k: 'ESTADIOS', t: 'Seis estadios, de día o de noche', s: 'Lluvia, neblina y luces de estadio. Llegá en carro, bus, taxi o Uber.' },
+    ];
+    let sel = 0, slide = 0;
+    const desc = h('div', { class: 'mm-desc' });
+    const btns = items.map((it, i) => h('button', { class: 'mm-item', onmouseenter: () => pick(i), onfocus: () => pick(i), onclick: () => { g.audio.ui?.('click'); it.go(); } }, it.label));
+    const pick = (i) => { sel = i; btns.forEach((b, k) => b.classList.toggle('on', k === i)); desc.textContent = items[i].desc; };
+    const head = h('div', { class: 'mm-slide' });
+    const dots = h('div', { class: 'mm-dots' }, ...news.map((_, i) => h('span', { onclick: () => show(i) })));
+    const show = (i) => {
+      slide = (i + news.length) % news.length; const n = news[slide];
+      head.replaceChildren(h('div', { class: 'mm-kicker' }, n.k), h('div', { class: 'mm-title' }, n.t), h('div', { class: 'mm-sub' }, n.s));
+      head.classList.remove('in'); void head.offsetWidth; head.classList.add('in');
+      [...dots.children].forEach((d, k) => d.classList.toggle('on', k === slide));
+    };
+    const el = h('div', { class: 'screen menu2' },
+      h('div', { class: 'mm-panel' }),
+      h('div', { class: 'mm-top' },
+        h('div', { class: 'mm-badge' }, h('span', { class: 'a' }, 'EL'), h('span', { class: 'b' }, '📷')),
+        h('div', { class: 'mm-brand' }, h('div', { class: 'a' }, 'ENTRE LÍNEAS'), h('div', { class: 'b' }, 'FOTÓGRAFO DE LA LIGA TICA')),
+        h('button', { class: 'mm-icon', title: 'Ajustes', onclick: () => this.settingsStandalone() }, '⚙')),
+      h('div', { class: 'mm-list' }, ...btns, desc),
+      h('div', { class: 'mm-news' }, head, dots),
+      h('div', { class: 'mm-hint' }, h('span', { class: 'key' }, 'Esc'), ' Ajustes', h('span', { class: 'key', style: { marginLeft: '18px' } }, '↑↓'), ' Navegar', h('span', { class: 'key', style: { marginLeft: '18px' } }, 'Enter'), ' Elegir'),
+      h('div', { class: 'mm-foot' }, h('span', { class: 'dot' }), `${g.playerName && g.playerName !== 'Fotógrafo' ? g.playerName + ' · ' : ''}v0.1 · Clubes, estadios y marcas ficticias`));
+    pick(0); show(0);
+    const timer = setInterval(() => { if (document.body.contains(el)) show(slide + 1); }, 6500);
+    const onKey = (e) => {
+      if (this.ui.screen !== el || this.ui.root.querySelector('.confirm-layer')) return;
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); pick((sel + 1) % items.length); btns[sel].focus(); }
+      else if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); pick((sel - 1 + items.length) % items.length); btns[sel].focus(); }
+      else if (e.code === 'ArrowRight') show(slide + 1); else if (e.code === 'ArrowLeft') show(slide - 1);
+      else if (e.code === 'Enter' && document.activeElement?.tagName !== 'BUTTON') { e.preventDefault(); items[sel].go(); }
+      else if (e.code === 'Escape') { e.preventDefault(); this.settingsStandalone(); }
+    };
+    document.addEventListener('keydown', onKey);
     this.ui.openScreen('menu', el);
+    this.ui.screenCleanup = () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
   }
   async newGameDialog() {
     const g = this.game;
