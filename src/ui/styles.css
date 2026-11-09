@@ -394,4 +394,10 @@ select, input[type=text] { background: #0e1830; color: var(--text); border: 1px 
 .lt-cell span { position: absolute; left: 4px; bottom: 3px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 3px #000; }
 .lt-cell.padfocus { outline: 2px solid var(--accent); }
 .event-card.cup { background: linear-gradient(135deg, rgba(242,84,45,.28), rgba(163,25,91,.32)); border-color: #ffd400; }
+.event-card.segunda { background: linear-gradient(135deg, rgba(27,79,160,.32), rgba(242,197,0,.14)); border-color: #3e78d6; }
+.event-card.menores { background: linear-gradient(135deg, rgba(61,220,132,.18), rgba(20,40,70,.5)); border-color: #59c48a; }
+.league-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+.league-tabs .tab { font-size: 13px; padding: 6px 12px; border-radius: 16px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--text); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.league-tabs .tab.on { background: var(--accent); color: #0a0d14; border-color: var(--accent); font-weight: 700; }
+.league-tabs .tab .cnt { font-size: 11px; background: rgba(0,0,0,.35); color: #fff; border-radius: 9px; padding: 0 6px; }
 .event-card.official { background: linear-gradient(135deg, rgba(31,157,85,.3), rgba(10,20,40,.6)); border-color: #3ddc84; }

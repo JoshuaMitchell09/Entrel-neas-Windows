@@ -49,8 +49,8 @@ export class Match {
     this.ball = new Ball(this.scene); this.players = [[], []]; this.restart = null; this.addedTime = Math.floor(rand(1, 4));
     this.feed = []; this.goalScorers = [];
     for (let t = 0; t < 2; t++) {
-      const sq = squad(this.teams[t].id);
-      FORM.forEach(([role, fx, fz], i) => { const p = new Footballer(this.scene, this.teams[t], t, sq[i], role, { fx, fz }, i === 6); p.noTouch = 0; this.players[t].push(p); });
+      const sq = squad(this.teams[t].id).map((q) => (opts.youth ? { ...q, height: q.height * (this.teams[t].youth === 'U-15' ? 0.9 : 0.95) } : q));
+      FORM.forEach(([role, fx, fz], i) => { const p = new Footballer(this.scene, this.teams[t], t, sq[i], role, { fx, fz }, i === 6); p.noTouch = 0; if (opts.youth) p.maxSpeed *= 0.92; this.players[t].push(p); });
     }
     this.all = [...this.players[0], ...this.players[1]];
     this.captains = [this.players[0][6], this.players[1][6]]; this.sideSign = 1;

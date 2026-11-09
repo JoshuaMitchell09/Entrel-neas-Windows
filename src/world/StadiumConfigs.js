@@ -68,3 +68,47 @@ STADIUMS.cartago = {
   hasBarra: true, tifo: 'Brumosos hasta la muerte',
   description: 'Azul y amarillo, techo de estructura metálica y neblina de la Vieja Metrópoli.',
 };
+// ---------- Segunda División ----------
+// Estadio de barrio inspirado en las canchas de la Segunda (gradería principal techada a lo largo de la calle,
+// gradería lateral destechada negra con pasillos amarillos, cabecera pequeña, césped sintético y postes de luz).
+STADIUMS.llano = {
+  id: 'llano', name: 'Estadio El Llano', city: 'Goicoechea', capacity: 4200, tier: 1, league: 'segunda',
+  nearRows: 22, endRows: 0, eastRows: 7, westRows: 0, farRows: 9, rowDepth: 0.8, rowHeight: 0.34,
+  roof: 'main', corners: false, lights: 'poles', poleH: 22, crowdDensity: 0.45, openSides: true, fenceH: 4.6,
+  turf: true, smallBoard: true,
+  seatColors: ['#1c1c1c', '#262626'], seatPattern: 'solid', aisleColor: '#f2c500', aisleEvery: 3,
+  roofSpec: { near: { color: '#f2f2f2', fascia: 'ESTADIO EL LLANO · SEGUNDA DIVISIÓN', fasciaColor: '#1b4fa0', backText: 'ESTADIO EL LLANO' } },
+  facade: '#f1f1ef', facadeBand: '#1b4fa0', facadeText: 'ESTADIO EL LLANO', facadeH: 9.5,
+  hasBarra: false, tifo: 'Orgullo de barrio',
+  description: 'Cancha de barrio de la Segunda: gradería techada a la calle, sintética rayada y postes de luz.',
+};
+// ---------- Ligas menores: complejos de entrenamiento ----------
+// Complejo del Deportivo Tibás (inspirado en los complejos de alto rendimiento): cancha principal con gradería techada
+// y varias canchas de entrenamiento alrededor con malla ciclón.
+STADIUMS.cantera = {
+  id: 'cantera', name: 'Complejo La Cantera', city: 'Tibás', capacity: 1500, tier: 1, league: 'menores',
+  nearRows: 22, endRows: 0, farRows: 0, rowDepth: 0.8, rowHeight: 0.24,
+  roof: 'main', corners: false, lights: 'poles', poleH: 18, crowdDensity: 0.2, openSides: true, fenceH: 4,
+  smallBoard: true,
+  seatColors: ['#4a2370', '#e9e9e9'], seatPattern: 'blocks', aisleColor: '#f2b705', aisleEvery: 10,
+  roofSpec: { near: { color: '#efefef', fascia: 'COMPLEJO LA CANTERA · LIGAS MENORES', fasciaColor: '#4a2370' } },
+  facade: '#f4f4f2', facadeBand: '#4a2370', facadeText: 'COMPLEJO DEPORTIVO LA CANTERA', facadeH: 6,
+  extraFields: [{ x: -50, z: -92, l: 88, w: 54, turf: true }, { x: 50, z: -92, l: 88, w: 54 }, { x: 122, z: 0, rot: Math.PI / 2, l: 60, w: 40, goalW: 5, goalH: 2, players: 5 }],
+  extraPoles: [[-50, -60], [50, -60]],
+  hasBarra: false, tifo: 'La cantera',
+  description: 'Complejo de entrenamiento: cancha principal, gradería pequeña y canchas alrededor con juveniles.',
+};
+// Centro de alto rendimiento rojinegro (complejo de los Toros del Valle)
+STADIUMS.car = {
+  id: 'car', name: 'Centro de Alto Rendimiento Rojinegro', city: 'Alajuela', capacity: 1200, tier: 1, league: 'menores',
+  nearRows: 22, endRows: 0, farRows: 0, rowDepth: 0.8, rowHeight: 0.24,
+  roof: 'main', corners: false, lights: 'poles', poleH: 18, crowdDensity: 0.18, openSides: true, fenceH: 4,
+  smallBoard: true,
+  seatColors: ['#c8102e', '#1a1a1a'], seatPattern: 'blocks', aisleColor: '#f2b705', aisleEvery: 8,
+  roofSpec: { near: { color: '#b3202c', fascia: 'CENTRO DE ALTO RENDIMIENTO · TOROS DEL VALLE', fasciaColor: '#141414' } },
+  facade: '#f2f2f2', facadeBand: '#c8102e', facadeText: 'CENTRO DE ALTO RENDIMIENTO ROJINEGRO', facadeH: 6,
+  extraFields: [{ x: -50, z: -92, l: 88, w: 54 }, { x: 50, z: -92, l: 88, w: 54, turf: true }, { x: -122, z: 0, rot: Math.PI / 2, l: 60, w: 40, goalW: 5, goalH: 2, players: 5 }],
+  extraPoles: [[-50, -60], [50, -60]],
+  hasBarra: false, tifo: 'Semillero rojinegro',
+  description: 'El semillero rojinegro: cancha principal, gradería techada y canchas de entrenamiento alrededor.',
+};

@@ -17,7 +17,7 @@ export function drawCredential(c, game) {
   ctx.fillStyle = hd; ctx.fillRect(0, 40, W, 108);
   ctx.fillStyle = '#f2c500'; ctx.fillRect(0, 148, W, 6);
   ctx.fillStyle = '#fff'; ctx.font = '900 30px Arial Black, Arial'; ctx.fillText(off ? off.short + ' · STAFF' : 'LIGA TICA', 24, 84);
-  ctx.font = '600 14px Arial'; ctx.fillStyle = '#e8eefc'; ctx.fillText(off ? off.name.toUpperCase() : 'PRIMERA DIVISIÓN · TEMPORADA 2026', 24, 108);
+  ctx.font = '600 14px Arial'; ctx.fillStyle = '#e8eefc'; ctx.fillText(off ? off.name.toUpperCase() : ({ segunda: 'SEGUNDA DIVISIÓN', menores: 'LIGAS MENORES · TORNEO JUVENIL' }[cr.league] || 'PRIMERA DIVISIÓN') + ' · TEMPORADA 2026', 24, 108);
   ctx.font = '700 12px Arial'; ctx.fillStyle = '#f2c500'; ctx.fillText(off ? 'PERSONAL DEL CLUB · ACCESO TOTAL' : 'ACREDITACIÓN OFICIAL', 24, 132);
   if (cr.home) { ctx.drawImage(crestCanvas(game.team(cr.home), 64), W - 150, 58); ctx.drawImage(crestCanvas(game.team(cr.away), 64), W - 80, 58); }
   // Foto (silueta)

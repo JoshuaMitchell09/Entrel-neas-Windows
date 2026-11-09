@@ -39,15 +39,16 @@ function cached(key, fn) { if (!cache.has(key)) cache.set(key, fn()); return cac
 
 // Césped del estadio con franjas de corte y líneas reglamentarias pintadas.
 // Cubre un área de (L + 2*m) x (W + 2*m) metros.
-export function pitchTexture(L = 105, W = 68, m = 8, wet = false) {
-  return cached(`pitch${L}${W}${m}${wet}`, () => {
+export function pitchTexture(L = 105, W = 68, m = 8, wet = false, turf = false) {
+  return cached(`pitch${L}${W}${m}${wet}${turf}`, () => {
     const ppm = 18; // píxeles por metro
     const TW = Math.round((L + 2 * m) * ppm), TH = Math.round((W + 2 * m) * ppm);
     const c = makeCanvas(TW, TH), ctx = c.getContext('2d');
     const rnd = seededRandom(7);
-    const stripes = 14, sw = (L + 2 * m) / stripes;
+    // Césped sintético: franjas más marcadas y uniformes, verde más saturado
+    const stripes = turf ? 24 : 14, sw = (L + 2 * m) / stripes;
     for (let i = 0; i < stripes; i++) {
-      ctx.fillStyle = i % 2 ? (wet ? '#2c6a2a' : '#3f8a35') : (wet ? '#336f2f' : '#4a9a3d');
+      ctx.fillStyle = turf ? (i % 2 ? '#2c8a30' : '#3fa83c') : i % 2 ? (wet ? '#2c6a2a' : '#3f8a35') : (wet ? '#336f2f' : '#4a9a3d');
       ctx.fillRect(i * sw * ppm, 0, sw * ppm + 1, TH);
     }
     // Ruido de hierba
@@ -64,8 +65,7 @@ export function pitchTexture(L = 105, W = 68, m = 8, wet = false) {
       ctx.fillStyle = g; ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
     };
     const X = (x) => (x + L / 2 + m) * ppm, Y = (z) => (z + W / 2 + m) * ppm;
-    wear(X(-L / 2 + 3), Y(0), 5 * ppm, 0.35); wear(X(L / 2 - 3), Y(0), 5 * ppm, 0.35);
-    wear(X(0), Y(0), 6 * ppm, 0.15);
+    if (!turf) { wear(X(-L / 2 + 3), Y(0), 5 * ppm, 0.35); wear(X(L / 2 - 3), Y(0), 5 * ppm, 0.35); wear(X(0), Y(0), 6 * ppm, 0.15); }
     // Líneas
     ctx.strokeStyle = 'rgba(245,245,240,0.95)'; ctx.lineWidth = 0.12 * ppm;
     ctx.strokeRect(X(-L / 2), Y(-W / 2), L * ppm, W * ppm);

@@ -31,6 +31,29 @@ EVENTS.push(
   { id: 'cup4', title: 'COPA CENTROAMERICANA · FINAL', cup: true, final: true, home: 'tibas', away: 'izalco', stadium: 'cueva', time: 'night', weather: 'clear', minRep: 60, mult: 3, kickoff: 20 * 60,
     assignment: { title: 'Campeones de Centroamérica', desc: 'La foto del campeón: el gol, la celebración y el trofeo.', tags: ['gol', 'celebracion', 'final', 'publico'] }, missions: ['m_final', 'm_portada'] },
 );
+// Segunda División: todos los partidos en el Estadio El Llano. Pagan menos pero no piden reputación.
+EVENTS.push(
+  { id: 'seg1', title: 'SEGUNDA DIVISIÓN · Fecha 1', league: 'segunda', home: 'llanero', away: 'moravia', stadium: 'llano', time: 'day', weather: 'clear', minRep: 0, mult: 0.55, kickoff: 11 * 60,
+    assignment: { title: 'Fútbol de barrio', desc: 'El partido de la Segunda: goles, duelos y la gente en la gradería techada.', tags: ['gol', 'disputa', 'celebracion', 'publico'] }, missions: [] },
+  { id: 'seg2', title: 'SEGUNDA DIVISIÓN · Fecha 4', league: 'segunda', home: 'llanero', away: 'cerro', stadium: 'llano', time: 'sunset', weather: 'cloudy', minRep: 3, mult: 0.65, kickoff: 16 * 60 + 30,
+    assignment: { title: 'Duelo de vecinos', desc: 'Entradas fuertes y remates en la sintética.', tags: ['entrada', 'disputa', 'remate', 'gol'] }, missions: [] },
+  { id: 'seg3', title: 'SEGUNDA DIVISIÓN · Fecha 9', league: 'segunda', home: 'aserri', away: 'puriscal', stadium: 'llano', time: 'night', weather: 'clear', minRep: 8, mult: 0.75, kickoff: 19 * 60 + 30,
+    assignment: { title: 'Noche en El Llano', desc: 'Con los postes de luz: la acción y los porteros.', tags: ['atajada', 'remate', 'gol', 'celebracion'] }, missions: ['m_portero'] },
+  { id: 'seg4', title: 'SEGUNDA DIVISIÓN · Final por el ascenso', league: 'segunda', final: true, home: 'llanero', away: 'aserri', stadium: 'llano', time: 'night', weather: 'cloudy', minRep: 15, mult: 1.1, kickoff: 20 * 60,
+    assignment: { title: '¡Ascenso!', desc: 'La final por el ascenso a Primera: el gol, la celebración y la afición.', tags: ['gol', 'celebracion', 'publico', 'final'] }, missions: ['m_celebracion'] },
+);
+// Ligas menores: canchas de los complejos de entrenamiento
+EVENTS.push(
+  { id: 'men1', title: 'LIGAS MENORES · U-17', league: 'menores', youth: true, home: 'tibas_u17', away: 'toros_u17', stadium: 'cantera', time: 'day', weather: 'clear', minRep: 0, mult: 0.45, kickoff: 9 * 60 + 30,
+    assignment: { title: 'Las futuras estrellas', desc: 'Retratá a los talentos de la U-17: regates, remates y la celebración.', tags: ['regate', 'remate', 'gol', 'celebracion'] }, missions: [] },
+  { id: 'men2', title: 'LIGAS MENORES · U-17', league: 'menores', youth: true, home: 'toros_u17', away: 'brumas_u17', stadium: 'car', time: 'day', weather: 'cloudy', minRep: 2, mult: 0.5, kickoff: 10 * 60,
+    assignment: { title: 'Semillero rojinegro', desc: 'El torneo juvenil en el centro de alto rendimiento: duelos y atajadas.', tags: ['disputa', 'atajada', 'remate', 'gol'] }, missions: [] },
+  { id: 'men3', title: 'LIGAS MENORES · U-15', league: 'menores', youth: true, home: 'tibas_u15', away: 'cafetal_u15', stadium: 'cantera', time: 'sunset', weather: 'clear', minRep: 5, mult: 0.55, kickoff: 15 * 60 + 30,
+    assignment: { title: 'La cantera', desc: 'Los más chicos: alegría, garra y el gol del partido.', tags: ['gol', 'celebracion', 'regate', 'entrada'] }, missions: [] },
+  { id: 'men4', title: 'LIGAS MENORES · Final U-15', league: 'menores', youth: true, final: true, home: 'toros_u15', away: 'tibas_u15', stadium: 'car', time: 'night', weather: 'clear', minRep: 10, mult: 0.7, kickoff: 18 * 60 + 30,
+    assignment: { title: 'Campeones juveniles', desc: 'La final del torneo juvenil: el gol y el festejo del campeón.', tags: ['gol', 'celebracion', 'final'] }, missions: [] },
+);
+export const LEAGUES = { primera: 'Primera División', segunda: 'Segunda División', menores: 'Ligas menores', cup: 'Copa Centroamericana' };
 export const TITLES = [[0, 'Fotógrafo amateur'], [12, 'Colaborador'], [30, 'Fotógrafo de planta'], [50, 'Fotógrafo destacado'], [70, 'Referente nacional'], [90, 'Leyenda de la Liga']];
 export const CONTRACTS = [
   { id: 'freelance', name: 'Colaborador · Ascenso Total', minRep: 0, payMult: 1, desc: 'Pago por foto entregada.' },

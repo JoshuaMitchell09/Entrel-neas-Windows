@@ -168,6 +168,12 @@ export class Humanoid {
     this.lensMesh = new THREE.Mesh(g.lens, stdMat('#1d1d1d', 0.4, 0.3)); this.lensMesh.position.set(0, -0.01, 0.04); this.lensMesh.scale.set(1, 1, 0.12); this.cameraRig.add(this.lensMesh);
     this.spine.add(this.cameraRig);
     this.cameraRig.position.set(0, 0.3, 0.3);
+    // Segundo cuerpo colgado a la cadera (correa cruzada), con el lente apuntando al suelo
+    this.cam2Rig = new THREE.Group(); this.cam2Rig.visible = false;
+    const c2 = new THREE.Mesh(g.camBody, stdMat('#141414', 0.45, 0.2)); c2.castShadow = true; this.cam2Rig.add(c2);
+    this.lens2Mesh = new THREE.Mesh(g.lens, stdMat('#1d1d1d', 0.4, 0.3)); this.lens2Mesh.position.set(0, -0.01, 0.04); this.lens2Mesh.scale.set(1, 1, 0.12); this.cam2Rig.add(this.lens2Mesh);
+    this.cam2Rig.position.set((fem ? 0.2 : 0.22), -0.02, 0.06); this.cam2Rig.rotation.set(Math.PI / 2 - 0.15, 0, 0.12);
+    this.hips.add(this.cam2Rig);
 
     // Estado de animación
     this.phase = Math.random() * 10; this.speed = 0; this.state = 'idle'; this.stateT = 0; this.stateDur = 1;
@@ -181,6 +187,13 @@ export class Humanoid {
     this.lensMesh.scale.set(r / 0.04, r / 0.04, L);
   }
   showCamera(v) { this.cameraRig.visible = v; }
+  setSecondCamera(look, mm) {
+    this.cam2Rig.visible = !!look; if (!look) return;
+    const L = clamp(0.07 + mm / 1400, 0.08, 0.5), r = clamp(0.035 + mm / 9000, 0.04, 0.085);
+    this.lens2Mesh.scale.set(r / 0.04, r / 0.04, L);
+    const b = this.cam2Rig.children[0]; b.scale.set(look.size, look.size * (look.grip ? 1.35 : 1), look.size);
+    if (!b.material.userData.own) { b.material = b.material.clone(); b.material.userData.own = true; } b.material.color.set(look.color);
+  }
   // Tamaño y color del cuerpo de cámara (cada modelo se ve distinto)
   setCameraBody(look) {
     if (!look) return; const b = this.cameraRig.children[0];

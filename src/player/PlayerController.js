@@ -29,10 +29,15 @@ export class PlayerController {
     this.avatar.showCamera(this.cameraEquipped); this.avatar.setLensLength(this.game.inventory.lens.max);
     if (this.avatar.backpack) this.avatar.backpack.visible = bpVis;
     this.avatar.setCameraBody(this.game.inventory.camera?.look);
+    this.syncSecondCamera();
     this.game.viewModel?.setSkin(this.look.skin, this.look.shirt);
   }
   place(x, z, yaw = 0) { this.pos.set(x, 0, z); this.yaw = yaw; this.vel.set(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = yaw; }
   get forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
+  syncSecondCamera() {
+    const inv = this.game.inventory, show = inv.hasSecond && (!this.game.inEvent || inv.prepared !== false);
+    this.avatar.setSecondCamera?.(show ? inv.camera2.look : null, inv.lens2?.max || 70);
+  }
   setCameraEquipped(v) {
     this.cameraEquipped = v; this.avatar.showCamera(v);
   }

@@ -114,6 +114,7 @@ export class Game {
     E.on('env:label', () => this.post?.configure());
     E.on('battery:empty', () => { this.ui.toast('¡Batería agotada! Presioná B para cambiarla.', 'bad', 4000); if (this.photoMode.active) this.photoMode.exit(); });
     E.on('photo:taken', (rec) => { this.career.stats.photos++; });
+    E.on('inventory:changed', () => this.player?.syncSecondCamera?.());
   }
   // ---------------- Niveles ----------------
   disposeLevel() {
@@ -138,7 +139,7 @@ export class Game {
     this.scenery = new Scenery(this, new THREE.Vector3(0, 0, 0), 175);
     if (!this.post.composer && this.settings.q.bloom) this.post.setup(); else this.post.configure();
     onProgress(0.8, 'Calentando a los equipos…');
-    this.match = new Match(this, this.stadium, home, away, { halfSeconds: +this.settings.data.halfSeconds || 240 });
+    this.match = new Match(this, this.stadium, home, away, { halfSeconds: +this.settings.data.halfSeconds || 240, youth: !!(ev.youth || home.youth) });
     this.collision.rebuild();
     this.scene.add(this.player.root);
     this.player.avatar.setLensLength(this.inventory.lens.max);
@@ -197,8 +198,9 @@ export class Game {
     // Equipo completo disponible y listo
     const inv = this.inventory; inv.reset();
     for (const id of Object.keys(ALL_ITEMS)) if (ALL_ITEMS[id].type !== 'credential') inv.owned[id] = Math.max(1, inv.owned[id] || 0);
-    inv.equipped = { camera: cfg.camera, lens: cfg.lens, card: 'card_256', backpack: 'backpack_pro' };
-    inv.packed = new Set(['battery', 'monopod', 'raincover', ...Object.keys(ALL_ITEMS).filter((id) => ALL_ITEMS[id].type === 'lens' && id !== cfg.lens)]);
+    const cam2 = cfg.camera2 === undefined ? (cfg.camera === 'jm_pro' ? 'jm_sport' : 'jm_pro') : cfg.camera2, lens2 = cam2 ? (cfg.lens2 || (cfg.lens === 'l_24_70' ? 'l_16_35' : 'l_24_70')) : null;
+    inv.equipped = { camera: cfg.camera, lens: cfg.lens, card: 'card_256', backpack: 'backpack_pro', camera2: cam2, lens2 };
+    inv.packed = new Set(['battery', 'monopod', 'raincover', ...Object.keys(ALL_ITEMS).filter((id) => ALL_ITEMS[id].type === 'lens' && id !== cfg.lens && id !== lens2)]);
     inv.spares = [1, 1];
     this.career.reset();
     const T = TIME_PRESETS[cfg.time];
@@ -321,10 +323,22 @@ export class Game {
       if (pm.active) pm.exit();
       else { if (!p.cameraEquipped) p.setCameraEquipped(true); pm.enter(); }
     }
+    if (inp.keyPressed(inp.bind('swapCamera')) || (pm.active && inp.padPressed('sprint'))) this.swapCameraBodies();
     if (inp.keyPressed(inp.bind('swapBattery')) || (pm.active && inp.padPressed('swapBattery'))) {
       if (this.inventory.swapBattery()) { this.ui.toast(`Batería cambiada (${this.inventory.batteryPct}%).`, 'good'); this.audio.ui('click'); }
       else this.ui.toast('No hay baterías de repuesto con carga en la mochila.', 'warn');
     }
+  }
+  swapCameraBodies() {
+    const inv = this.inventory, pm = this.photoMode;
+    if (!inv.hasSecond) { this.ui.toast('No llevás segunda cámara. Armá el segundo cuerpo en el inventario (antes del evento).', 'warn', 2600); return; }
+    if (this.inEvent && !inv.prepared) { this.ui.toast('Primero prepará el equipo en la zona de prensa.', 'warn'); return; }
+    const prevFocal = pm.s.focal; pm.s.focal = this.cam2Focal ?? inv.lens2.min; this.cam2Focal = prevFocal;
+    inv.swapBodies();
+    pm.clampFocal(); pm.clampAperture?.();
+    const p = this.player; p.avatar.setLensLength(inv.lens.max); p.avatar.setCameraBody(inv.camera.look); p.syncSecondCamera();
+    this.audio.ui('click');
+    this.ui.toast(`Segunda cámara en mano: ${inv.camera.name} + ${inv.lens.short} (${inv.batteryPct}% batería)`, 'info', 1800);
   }
   toggleView() {
     const s = this.settings.data, fp = s.view !== 'primera';

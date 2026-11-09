@@ -113,7 +113,7 @@ export class Story {
     I.add({ position: this.mariana.pos.clone().setY(1.2).add(new THREE.Vector3(0, 0, 2)), radius: 3.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con Mariana`, onInteract: () => this.talkMariana() });
     I.add({ position: st.spots.guard.clone().setY(1.2), radius: 3.5, prompt: () => this.stage === 'street' || this.stage === 'credential' ? `<kbd>${g.ui.key('interact')}</kbd>Presentarse en seguridad` : null, onInteract: () => this.security() });
     I.add({ getPosition: () => this.alvaro.pos.clone().setY(1), position: this.alvaro.pos, radius: 3, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con Kendall Rojas`, onInteract: () => this.talkAlvaro() });
-    g.inventory.prepared = false;
+    g.inventory.prepared = false; g.player.syncSecondCamera?.();
     I.add({ position: st.spots.prepBench.clone().setY(1), radius: 2.6, prompt: () => (!g.inventory.prepared && ['inside', 'field'].includes(this.stage) ? `<kbd>${g.ui.key('interact')}</kbd>Preparar equipo` : null), onInteract: () => this.prepare() });
     I.add({ position: st.pressDoor.center, radius: 2.4, prompt: () => (st.pressDoor.isOpen ? null : `<kbd>${g.ui.key('interact')}</kbd>Abrir: Sala de prensa`), onInteract: () => {
       if (!g.inventory.credential) { g.ui.toast('Acceso restringido: se requiere acreditación de prensa.', 'warn'); g.audio?.ui('error'); return; }
@@ -207,7 +207,7 @@ export class Story {
     ];
     await g.ui.dialogue(lines);
     const d = new Date();
-    inv.credential = { eventId: ev.id, cup: !!ev.cup && !ev.official, official: ev.official || null, seat: 10 + Math.floor(Math.random() * 80), event: `${ev.title} · ${g.team(ev.home).short} vs ${g.team(ev.away).short}`, home: ev.home, away: ev.away, stadium: st.name, date: d.toLocaleDateString('es-CR') + ' · ' + formatClock(ev.kickoff), number: `LT-26-${String(Math.floor(Math.random() * 9000) + 1000)}` };
+    inv.credential = { eventId: ev.id, league: ev.league || null, cup: !!ev.cup && !ev.official, official: ev.official || null, seat: 10 + Math.floor(Math.random() * 80), event: `${ev.title} · ${g.team(ev.home).short} vs ${g.team(ev.away).short}`, home: ev.home, away: ev.away, stadium: st.name, date: d.toLocaleDateString('es-CR') + ' · ' + formatClock(ev.kickoff), number: `LT-26-${String(Math.floor(Math.random() * 9000) + 1000)}` };
     if (!inv.owned.credential) inv.owned.credential = 1;
     g.audio?.ui('mission');
     g.screens.credential(() => {
@@ -303,7 +303,7 @@ export class Story {
     if (g.player.avatar.backpack) g.player.avatar.backpack.visible = true;
     g.player.avatar.setLensLength(L.max); g.player.setCameraEquipped(true);
     g.camOverride = null; g.cinematic = false; g.follow.snap(g.player);
-    inv.prepared = true; this.setObjective(); g.events.emit('story:prepared'); g.missions.add('m_cancha');
+    inv.prepared = true; g.player.syncSecondCamera?.(); this.setObjective(); g.events.emit('story:prepared'); g.missions.add('m_cancha');
     g.ui.toast(`Equipo listo: ${inv.camera.name} + ${L.short}`, 'good', 3000);
     g.saves.save('auto');
   }

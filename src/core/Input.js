@@ -5,7 +5,7 @@ export const DEFAULT_BINDINGS = {
   interact: 'KeyE', equip: 'KeyG', inventory: 'KeyI', gallery: 'KeyP',
   map: 'KeyM', missions: 'KeyJ', pause: 'Escape',
   paramPrev: 'KeyQ', paramNext: 'KeyE', paramDec: 'KeyZ', paramInc: 'KeyX',
-  autofocus: 'KeyF', driveMode: 'KeyR', view: 'KeyV', gear: 'Tab', swapBattery: 'KeyB', zoomIn: 'Equal', zoomOut: 'Minus', phone: 'KeyH',
+  autofocus: 'KeyF', driveMode: 'KeyR', view: 'KeyV', gear: 'Tab', swapBattery: 'KeyB', swapCamera: 'KeyT', zoomIn: 'Equal', zoomOut: 'Minus', phone: 'KeyH',
 };
 export const ACTION_LABELS = {
   forward: 'Avanzar', back: 'Retroceder', left: 'Izquierda', right: 'Derecha', sprint: 'Correr / Sprint',
@@ -13,7 +13,7 @@ export const ACTION_LABELS = {
   equip: 'Equipar / guardar cámara', inventory: 'Inventario', gallery: 'Galería', map: 'Mapa', missions: 'Misiones',
   pause: 'Pausa / salir del visor', paramPrev: 'Parámetro anterior (visor)', paramNext: 'Parámetro siguiente (visor)',
   paramDec: 'Disminuir valor', paramInc: 'Aumentar valor', autofocus: 'Autofoco', driveMode: 'Modo de disparo', view: 'Primera / tercera persona',
-  gear: 'Revisar equipo', swapBattery: 'Cambiar batería', zoomIn: 'Zoom + (teclado)', zoomOut: 'Zoom − (teclado)', phone: 'Teléfono',
+  gear: 'Revisar equipo', swapBattery: 'Cambiar batería', swapCamera: 'Cambiar a la segunda cámara', zoomIn: 'Zoom + (teclado)', zoomOut: 'Zoom − (teclado)', phone: 'Teléfono',
 };
 
 export class Input {

@@ -205,14 +205,17 @@ export class Screens {
       const owned = Object.keys(inv.owned).filter((k) => inv.owned[k] > 0 && ALL_ITEMS[k]);
       const eq = inv.equipped;
       const row = (id) => {
-        const it = ALL_ITEMS[id], equipped = Object.values(eq).includes(id), packed = inv.packed.has(id);
-        const canPack = ['lens', 'accessory', 'battery'].includes(it.type) && !equipped;
+        const it = ALL_ITEMS[id], equipped = [eq.camera, eq.lens, eq.card, eq.backpack].includes(id), packed = inv.packed.has(id);
+        const second = eq.camera2 === id || eq.lens2 === id, spare = inv.free(id) > 0;
+        const canPack = ['lens', 'accessory', 'battery'].includes(it.type) && !equipped && !(second && !spare);
         const stats = it.type === 'camera' ? `${it.crop > 1 ? 'APS-C' : 'Formato completo'} · ISO máx. ${it.maxISO} · ${it.fps} fps · AF ${Math.round(it.afSpeed * 100)} · batería ${it.battery} disparos`
           : it.type === 'lens' ? `${it.min === it.max ? it.min + ' mm' : it.min + '-' + it.max + ' mm'} · f/${it.fMin}${it.fMax !== it.fMin ? '-' + it.fMax : ''} · estab. ${it.stab} pasos · ${it.weight} kg`
           : it.type === 'card' ? `${it.capacity} fotografías` : it.type === 'battery' ? `${inv.spares.length} repuesto(s): ${inv.spares.map((c) => Math.round(c * 100) + '%').join(', ')}` : it.type === 'backpack' ? `${it.slots} espacios` : it.desc || '';
         return h('div', { class: 'card item' }, h('div', { class: 'ic' }, ICONS[it.type] || '•'),
           h('div', { style: { flex: 1 } }, h('div', { class: 'nm' }, it.name, inv.owned[id] > 1 ? ` ×${inv.owned[id]}` : ''), h('div', { class: 'ds' }, stats)),
-          equipped ? h('span', { class: 'pill on' }, 'Equipado') : null, packed ? h('span', { class: 'pill y' }, 'En mochila') : null,
+          equipped ? h('span', { class: 'pill on' }, 'Equipado') : null, second ? h('span', { class: 'pill on' }, '2.ª cámara') : null, packed ? h('span', { class: 'pill y' }, 'En mochila') : null,
+          it.type === 'camera' && !second && spare && !g.inEvent ? h('button', { class: 'btn small', title: 'Llevala colgada como segundo cuerpo (ocupa 2 espacios)', onclick: () => { if (inv.setSecond('camera', id)) { if (!inv.lens2) { const l = Object.keys(inv.owned).find((k) => ALL_ITEMS[k]?.type === 'lens' && inv.free(k) > 0); if (l) inv.setSecond('lens', l); } g.audio?.ui('click'); render(); } } }, '+ Segunda cámara') : null,
+          it.type === 'lens' && eq.camera2 && !second && spare && !g.inEvent ? h('button', { class: 'btn small', onclick: () => { if (inv.setSecond('lens', id)) { g.audio?.ui('click'); render(); } } }, 'Montar en la 2.ª') : null,
           ['camera', 'lens', 'card', 'backpack'].includes(it.type) && !equipped ? h('button', { class: 'btn small', onclick: () => { if (inv.equip(id)) { g.audio?.ui('click'); g.player?.avatar.setLensLength(inv.lens.max); render(); } } }, 'Equipar') : null,
           canPack ? h('button', { class: 'btn small', onclick: () => { inv.togglePack(id); render(); } }, packed ? 'Sacar de la mochila' : 'Llevar en la mochila') : null);
       };
@@ -221,7 +224,16 @@ export class Screens {
         h('div', { class: 'grid' }, cred, ...owned.map(row)),
         h('div', {}, h('div', { class: 'card' }, h('div', { class: 'h3' }, 'Mochila para el evento'), h('div', { class: 'stat' }, h('span', {}, 'Espacios'), h('b', {}, `${inv.slotsUsed()} / ${inv.slots}`)),
           h('div', { class: 'stat' }, h('span', {}, 'Batería en cámara'), h('b', {}, `${inv.batteryPct}%`)), h('div', { class: 'stat' }, h('span', {}, 'Tarjeta'), h('b', {}, `${inv.cardUsed} / ${inv.cardCapacity}`)),
-          h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '8px' } }, 'Durante un evento solo podés cambiar a lentes que estén en la mochila. Las baterías de repuesto se cambian con B.'),
+          h('div', { class: 'muted', style: { fontSize: '12px', marginTop: '8px' } }, 'Durante un evento solo podés cambiar a lentes que estén en la mochila. Las baterías de repuesto se cambian con B.')),
+          h('div', { class: 'card', style: { marginTop: '12px' } }, h('div', { class: 'h3' }, 'Segunda cámara'),
+            inv.camera2 ? h('div', {}, h('div', { class: 'stat' }, h('span', {}, 'Cuerpo'), h('b', {}, inv.camera2.name)), h('div', { class: 'stat' }, h('span', {}, 'Lente'), h('b', {}, inv.lens2?.short || '— (montá un lente)')),
+              h('div', { class: 'stat' }, h('span', {}, 'Batería'), h('b', {}, `${Math.round(inv.charge2 * 100)}%`)),
+              h('div', { class: 'muted', style: { fontSize: '12px', margin: '6px 0' } }, `Va colgada a la cadera. Presioná ${g.ui.key ? g.ui.key('swapCamera') : 'T'} (o L3 en el visor) para cambiar de cuerpo al instante: por ejemplo el 400 mm para la acción y un angular para la celebración.`),
+              h('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap' } },
+                inv.hasSecond ? h('button', { class: 'btn small primary', onclick: () => { g.swapCameraBodies(); render(); } }, '⇄ Intercambiar') : null,
+                !g.inEvent ? h('button', { class: 'btn small', onclick: () => { inv.setSecond('camera', null); render(); } }, 'Dejar en casa') : null))
+            : h('div', { class: 'muted', style: { fontSize: '12px' } }, 'No llevás segundo cuerpo. Con dos cámaras podés tener un teleobjetivo y un angular listos a la vez, como los profesionales. Elegí una cámara libre con «+ Segunda cámara» (ocupa 2 espacios de la mochila).')),
+          h('div', {},
           g.inEvent && inv.packed.has('battery') ? h('button', { class: 'btn small', style: { marginTop: '10px' }, onclick: () => { if (inv.swapBattery()) { g.ui.toast('Batería cambiada.', 'good'); render(); } else g.ui.toast('No hay una batería con más carga.', 'warn'); } }, 'Cambiar batería') : null))));
     };
     render();
@@ -360,9 +372,13 @@ export class Screens {
           h('button', { class: 'btn primary', onclick: () => { const team = c.officialOffer.team; c.officialOffer = null; g.startEvent({ ...oo, official: team, mult: (oo.mult || 1) * 1.3 }); } }, 'Aceptar'),
           h('button', { class: 'btn small', onclick: () => { c.officialOffer = null; render(); } }, 'Rechazar'))));
       left.append(h('div', { class: 'h3', style: { marginTop: '12px' } }, 'Calendario de coberturas'));
+      const lg = (e) => (e.cup ? 'cup' : e.league || 'primera'), F = this.leagueFilter || 'all';
+      left.append(h('div', { class: 'league-tabs' }, ...[['all', 'Todas'], ['primera', 'Primera'], ['segunda', 'Segunda'], ['menores', 'Ligas menores'], ['cup', 'Copa']].map(([k, l]) =>
+        h('button', { class: 'tab' + (F === k ? ' on' : ''), onclick: () => { this.leagueFilter = k; render(); } }, l, k !== 'all' ? h('span', { class: 'cnt' }, String(evs.filter((e) => lg(e) === k && !e.locked && !e.done).length)) : null))));
       for (const e of evs) {
+        if (F !== 'all' && lg(e) !== F) continue;
         const st = STADIUMS[e.stadium];
-        left.append(h('div', { class: 'event-card' + (e.locked ? ' locked' : '') + (e.cup ? ' cup' : '') + (next && next.id === e.id ? ' next' : '') },
+        left.append(h('div', { class: 'event-card' + (e.locked ? ' locked' : '') + (e.cup ? ' cup' : '') + (e.league ? ' ' + e.league : '') + (next && next.id === e.id ? ' next' : '') },
           h('div', {}, h('div', { class: 'muted', style: { fontSize: '12px', letterSpacing: '1px' } }, `${e.title.toUpperCase()} · ${st.name} · ${formatClock(e.kickoff)} · ${TIME_PRESETS[e.time].label} · ${WEATHER_PRESETS[e.weather].label}`),
             h('div', { class: 'teams', style: { margin: '6px 0' } }, this.ui.crest(g.team(e.home), 30), g.teamName(e.home), h('span', { class: 'muted' }, 'vs'), this.ui.crest(g.team(e.away), 30), g.teamName(e.away)),
             h('div', { style: { fontSize: '13px' } }, h('b', {}, 'Encargo: '), `${e.assignment.title} — ${e.assignment.desc}`),
@@ -394,10 +410,21 @@ export class Screens {
     const items = [...Object.values(CAMERAS), ...Object.values(LENSES), ...Object.values(ACCESSORIES)].filter((i) => i.price > 0);
     for (const it of items) {
       const owned = inv.owns(it.id) && !it.stack, locked = (it.rep || 0) > c.reputation, afford = c.money >= it.price;
+      const another = it.type === 'camera' && inv.owns(it.id) && (inv.owned[it.id] || 0) < 2 && afford;
       box.append(h('div', { class: 'item', style: { padding: '8px 0', borderBottom: '1px solid var(--line)' } }, h('div', { class: 'ic', style: { width: '38px', height: '38px', fontSize: '18px' } }, ICONS[it.type]),
         h('div', { style: { flex: 1, fontSize: '13px' } }, h('div', { class: 'nm' }, it.name), h('div', { class: 'ds' }, it.desc || (it.type === 'lens' ? `Estab. ${it.stab} · AF ${Math.round(it.af * 100)}` : it.type === 'camera' ? `${it.fps} fps · ISO ${it.maxISO}` : it.type === 'card' ? `${it.capacity} fotos` : ''))),
-        owned ? h('span', { class: 'pill on' }, 'Tuyo') : h('button', { class: 'btn small' + (afford && !locked ? ' primary' : ''), disabled: !afford || locked ? true : null, title: locked ? `Requiere reputación ${it.rep}` : '', onclick: () => { c.money -= it.price; inv.add(it.id); g.audio?.ui('cash'); g.ui.toast(`Compraste ${it.name}.`, 'good'); g.saves.save('auto'); rerender(); } }, locked ? `Rep. ${it.rep}` : formatMoney(it.price))));
+        owned ? h('span', { style: { display: 'flex', gap: '6px', alignItems: 'center' } }, h('span', { class: 'pill on' }, (inv.owned[it.id] || 0) > 1 ? `Tuyo ×${inv.owned[it.id]}` : 'Tuyo'),
+          another ? h('button', { class: 'btn small', title: 'Otra unidad del mismo cuerpo, para llevarla como segunda cámara', onclick: () => { c.money -= it.price; inv.add(it.id); g.audio?.ui('cash'); g.ui.toast(`Compraste otra ${it.name}.`, 'good'); g.saves.save('auto'); rerender(); } }, `+1 · ${formatMoney(it.price)}`) : null) : h('button', { class: 'btn small' + (afford && !locked ? ' primary' : ''), disabled: !afford || locked ? true : null, title: locked ? `Requiere reputación ${it.rep}` : '', onclick: () => { c.money -= it.price; inv.add(it.id); g.audio?.ui('cash'); g.ui.toast(`Compraste ${it.name}.`, 'good'); g.saves.save('auto'); rerender(); } }, locked ? `Rep. ${it.rep}` : formatMoney(it.price))));
     }
+    // Venta de equipo usado
+    const sellable = Object.keys(inv.owned).filter((id) => inv.canSell(id));
+    box.append(h('div', { class: 'h3', style: { marginTop: '14px' } }, 'Vender equipo usado'),
+      h('div', { class: 'muted', style: { fontSize: '12px', marginBottom: '4px' } }, 'La tienda te compra lo que ya no usás a cerca de la mitad de su precio. Lo equipado o montado en la segunda cámara no se puede vender.'),
+      ...(sellable.length ? sellable.map((id) => { const it = ALL_ITEMS[id], n = it.type === 'battery' ? inv.spares.length : inv.free(id);
+        return h('div', { class: 'item', style: { padding: '8px 0', borderBottom: '1px solid var(--line)' } }, h('div', { class: 'ic', style: { width: '38px', height: '38px', fontSize: '18px' } }, ICONS[it.type] || '•'),
+          h('div', { style: { flex: 1, fontSize: '13px' } }, h('div', { class: 'nm' }, it.name, n > 1 ? ` ×${n}` : ''), h('div', { class: 'ds' }, `Pagaste ${formatMoney(it.price)}`)),
+          h('button', { class: 'btn small', onclick: async () => { const v = inv.sellPrice(id); if (!(await this.ui.confirm(`¿Vender ${it.name} por ${formatMoney(v)}?`, 'Vender', false))) return; const got = inv.sell(id); if (got) { c.money += got; g.audio?.ui('cash'); g.ui.toast(`Vendiste ${it.name} por ${formatMoney(got)}.`, 'good'); g.saves.save('auto'); rerender(); } } }, `Vender · ${formatMoney(inv.sellPrice(id))}`)); })
+        : [h('div', { class: 'muted', style: { fontSize: '12px' } }, 'No tenés equipo libre para vender.')]));
     return box;
   }
   // ================= RESULTADOS =================

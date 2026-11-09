@@ -34,7 +34,28 @@ export const TEAMS = {
   izalco: { id: 'izalco', name: 'Real Izalco', short: 'IZA', city: 'San Salvador', country: 'SLV',
     colors: { primary: '#0f3d8c', secondary: '#f2f2f2', shorts: '#f2f2f2', socks: '#0f3d8c', ink: '#ffffff' },
     gk: { shirt: '#e91e63', shorts: '#111111' }, style: { pace: 0.98, pass: 1.0, shoot: 1.02 } },
+  // Segunda División (clubes ficticios de barrio)
+  llanero: { id: 'llanero', name: 'Atlético El Llano', short: 'LLA', city: 'Goicoechea', league: 'segunda',
+    colors: { primary: '#1b4fa0', secondary: '#f2c500', shorts: '#1b4fa0', socks: '#f2c500', ink: '#f2c500' },
+    gk: { shirt: '#111111', shorts: '#111111' }, style: { pace: 0.97, pass: 0.92, shoot: 0.95 } },
+  moravia: { id: 'moravia', name: 'Moravia F.C.', short: 'MOR', city: 'Moravia', league: 'segunda',
+    colors: { primary: '#1f8a3a', secondary: '#ffffff', shorts: '#ffffff', socks: '#1f8a3a', ink: '#ffffff' },
+    gk: { shirt: '#ff7a00', shorts: '#111111' }, style: { pace: 0.98, pass: 0.9, shoot: 0.93 } },
+  cerro: { id: 'cerro', name: 'Cerro Escazú A.D.', short: 'CER', city: 'Escazú', league: 'segunda',
+    colors: { primary: '#d62828', secondary: '#ffffff', shorts: '#ffffff', socks: '#d62828', ink: '#ffffff' },
+    gk: { shirt: '#20a4c8', shorts: '#20a4c8' }, style: { pace: 0.95, pass: 0.94, shoot: 0.95 } },
+  aserri: { id: 'aserri', name: 'Aserrí Fútbol Club', short: 'ASE', city: 'Aserrí', league: 'segunda',
+    colors: { primary: '#f77f00', secondary: '#111111', shorts: '#111111', socks: '#f77f00', ink: '#111111' },
+    gk: { shirt: '#7a2fbf', shorts: '#111111' }, style: { pace: 1.0, pass: 0.9, shoot: 0.94 } },
+  puriscal: { id: 'puriscal', name: 'Juventud Puriscal', short: 'PUR', city: 'Puriscal', league: 'segunda',
+    colors: { primary: '#ffffff', secondary: '#111111', shorts: '#111111', socks: '#ffffff', ink: '#111111' },
+    gk: { shirt: '#c6ff00', shorts: '#111111' }, style: { pace: 0.96, pass: 0.93, shoot: 0.92 } },
 };
+// Ligas menores: las categorías inferiores de los clubes de Primera (U-17 y U-15)
+for (const [base, cat] of [['tibas', 'U-17'], ['toros', 'U-17'], ['brumas', 'U-17'], ['tibas', 'U-15'], ['toros', 'U-15'], ['cafetal', 'U-15']]) {
+  const B = TEAMS[base], id = `${base}_${cat.replace('-', '').toLowerCase()}`;
+  TEAMS[id] = { ...B, id, name: `${B.name} ${cat}`, short: B.short, league: 'menores', youth: cat, style: { pace: B.style.pace * 0.94, pass: B.style.pass * 0.9, shoot: B.style.shoot * 0.9 } };
+}
 const SURNAMES = ['Rojas', 'Vargas', 'Jiménez', 'Mora', 'Solís', 'Araya', 'Chaves', 'Quesada', 'Alvarado', 'Calderón', 'Brenes',
   'Campos', 'Ramírez', 'Fonseca', 'Navarro', 'Murillo', 'Zúñiga', 'Hernández', 'Salazar', 'Arias', 'Cordero', 'Venegas',
   'Ugalde', 'Barrantes', 'Soto', 'Castro', 'Madrigal', 'Leiva', 'Porras', 'Matarrita', 'Granados', 'Esquivel', 'Montero', 'Obando',
