@@ -197,6 +197,8 @@ export class Stadium {
     for (let i = 0; i < rows; i++) {
       const top = topOf(i), z0 = i * rd, segs = [];
       if (A) for (let ax = -len / 2 + A; ax < len / 2 - 1; ax += A) {
+        // Sin pasillo donde la gradería está recortada (túnel, vestuarios y palco): quedaría flotando
+        if (cutout && top < cutout.maxTop && ax + 1 > cutout.x0 - 0.3 && ax < cutout.x1 + 0.3) continue;
         const g = new THREE.BoxGeometry(0.95, 0.06, rd); g.translate(ax + 0.5, top + 0.03, z0 + rd / 2); aisleGeos.push(g);
       }
       if (cutout && top < cutout.maxTop) { segs.push([-len / 2, cutout.x0]); segs.push([cutout.x1, len / 2]); }
