@@ -4,6 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ENTRE LÍNEAS · Fotógrafo de la Liga Tica</title>
+  <meta name="description" content="Simulador de fotografía deportiva del fútbol tico. Un juego de MitchellsVisuals." />
+  <meta name="theme-color" content="#05070d" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="ENTRE LÍNEAS · Fotógrafo de la Liga Tica" />
+  <meta property="og:description" content="Cubrí la Liga Tica, la Segunda, las ligas menores y la Copa Centroamericana con tu cámara. Un juego de MitchellsVisuals." />
+  <meta property="og:image" content="/og-image.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="/og-image.jpg" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/src/ui/styles.css" />
 </head>
 <body>
@@ -11,11 +20,42 @@
     <canvas id="game-canvas"></canvas>
     <div id="ui-root"></div>
     <div id="boot">
-      <div class="boot-inner">
-        <div class="boot-title">ENTRE LÍNEAS</div>
+      <div class="boot-bg"><i class="fl a"></i><i class="fl b"></i><i class="fl c"></i><i class="fl d"></i><i class="crowd"></i><i class="pitch"></i><i class="vig"></i></div>
+      <div class="boot-logo">
+        <svg viewBox="0 0 1000 540" aria-label="Entre Líneas">
+          <defs>
+            <linearGradient id="bl-sw" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#d62828"/><stop offset=".55" stop-color="#d62828"/><stop offset=".62" stop-color="#ffffff"/><stop offset=".7" stop-color="#1b4fd6"/><stop offset="1" stop-color="#1b4fd6"/></linearGradient>
+            <filter id="bl-grunge" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="7" result="n"/><feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -3.2 0 0 0 3.05" result="m"/><feComposite in="SourceGraphic" in2="m" operator="in"/></filter>
+            <clipPath id="bl-reveal"><rect class="bl-rv" x="0" y="0" width="1000" height="540"/></clipPath>
+          </defs>
+          <g class="bl-br" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="square">
+            <path class="tl" d="M60 120V46H140"/><path class="tr" d="M860 46H940V120"/><path class="bl" d="M60 400V474H140"/><path class="brr" d="M860 474H940V400"/>
+          </g>
+          <g transform="translate(808 148) scale(.92)">
+            <path class="bl-sw" d="M-128 40A134 134 0 1 1 112 74" fill="none" stroke="url(#bl-sw)" stroke-width="13" stroke-linecap="round"/>
+            <g class="bl-ap" filter="url(#bl-grunge)">
+              <circle r="100" fill="#ececec"/>
+              <g class="bl-blades" fill="none" stroke="#141414" stroke-width="7" stroke-linecap="round"><path d="M32.8 8.8L-46.8 88.4M8.8 32.8L-99.9 3.7M-24 24L-53.2 -84.7M-32.8 -8.8L46.8 -88.4M-8.8 -32.8L99.9 -3.7M24 -24L53.2 84.7"/><path d="M32.8 8.8L8.8 32.8L-24 24L-32.8 -8.8L-8.8 -32.8L24 -24Z"/></g>
+            </g>
+          </g>
+          <g class="bl-txt" clip-path="url(#bl-reveal)" filter="url(#bl-grunge)">
+            <text x="112" y="258" class="t1">ENTRE</text>
+            <text x="92" y="448" class="t2" textLength="800" lengthAdjust="spacingAndGlyphs">LÍNEAS</text>
+          </g>
+          <path class="bl-slash" d="M18 300 C300 286 640 270 968 252 L972 258 C640 282 300 300 22 312 Z" fill="#d62828"/><path class="bl-slash s2" d="M300 296 C520 284 700 276 900 266 L898 270 C700 282 520 291 302 300 Z" fill="#ff5a4f" opacity=".7"/>
+        </svg>
         <div class="boot-sub">FOTÓGRAFO DE LA LIGA TICA</div>
-        <div class="boot-bar"><div id="boot-progress"></div></div>
-        <div id="boot-msg">Cargando…</div>
+        <div class="boot-flag"><i></i><span><b></b><b></b><b></b><b></b><b></b></span><i></i></div>
+      </div>
+      <div class="boot-flash"></div>
+      <div class="boot-hud">
+        <div class="vf-l"><span class="af">● AF-C</span> ISO 3200 · 1/1000 · f/2.8</div>
+        <div class="vf-c">
+          <div class="boot-meter"><div class="ticks"></div><div class="boot-bar"><div id="boot-progress"></div></div></div>
+          <div id="boot-msg">Cargando…</div>
+          <div id="boot-tip"></div>
+        </div>
+        <div class="vf-r">[ <b id="boot-shots">999</b> ]</div>
       </div>
     </div>
   </div>

@@ -2,7 +2,22 @@ import { Game } from './game/Game.js';
 import { EVENTS } from './career/Career.js';
 
 const bootBar = document.getElementById('boot-progress'), bootMsg = document.getElementById('boot-msg');
-const progress = (p, msg) => { bootBar.style.width = Math.round(p * 100) + '%'; if (msg) bootMsg.textContent = msg; };
+const bootShots = document.getElementById('boot-shots'), bootTip = document.getElementById('boot-tip');
+const progress = (p, msg) => { bootBar.style.width = Math.round(p * 100) + '%'; if (msg) bootMsg.textContent = msg; if (bootShots) bootShots.textContent = String(999 - Math.round(p * 999)).padStart(3, '0'); };
+// Consejos mientras carga
+const TIPS = [
+  'Consejo: con T cambiás a tu segunda cámara al instante.',
+  'Consejo: un 1/1000 o más rápido congela la acción del partido.',
+  'Consejo: la foto del gol vale más si se ve la pelota y la cara del goleador.',
+  'Consejo: de noche subí el ISO, pero ojo con el ruido.',
+  'Consejo: en la Segunda y en las ligas menores no te piden reputación.',
+  'Consejo: vendé en la tienda el equipo que ya no usás.',
+  'Consejo: recogé la acreditación en el parqueo de prensa antes del partido.',
+];
+let tipIdx = Math.floor(Math.random() * TIPS.length);
+const showTip = () => { if (bootTip) { bootTip.textContent = TIPS[tipIdx % TIPS.length]; tipIdx++; } };
+showTip(); const tipTimer = setInterval(showTip, 3200);
+const bootStart = performance.now();
 const tick = () => new Promise((r) => setTimeout(r, 16));
 
 async function boot() {
@@ -19,7 +34,10 @@ async function boot() {
     game.start();
     game.screens.mainMenu();
     progress(1, 'Listo'); await tick();
-    const b = document.getElementById('boot'); b.style.opacity = 0; setTimeout(() => b.remove(), 700);
+    // Que la animación del logo se vea completa aunque la carga sea muy rápida
+    const wait = 2600 - (performance.now() - bootStart); if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    clearInterval(tipTimer);
+    const b = document.getElementById('boot'); b.classList.add('done'); setTimeout(() => b.remove(), 800);
   } catch (e) {
     console.error(e); bootMsg.textContent = 'Error al iniciar: ' + e.message; bootMsg.style.color = '#ff7a7a';
   }
