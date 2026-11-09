@@ -241,7 +241,7 @@ export class Phone {
     if (V === 'home') {
       body.append(h('div', { class: 'ph-wall' }, h('div', { class: 'ph-bigclock' }, formatClock(g.clock)), h('div', { class: 'muted' }, this.kickoffLine())));
       const unreadChats = Object.values(this.unread).reduce((a, b) => a + b, 0);
-      const apps = [['msgs', '💬', 'Mensajes', unreadChats], ['lente', '📷', 'Lente', this.social.newLikes ? '•' : 0], ['entradas', '🎟️', 'Entradas', this.tickets.filter((t) => t.status === 'disponible').length], ['reloj', '⏱️', 'Reloj', 0], ['galeria', '🖼️', 'Galería', 0], ['mapa', '🗺️', 'Mapa', 0]];
+      const apps = [['msgs', '💬', 'Mensajes', unreadChats], ['lente', '📷', 'Lente', this.social.newLikes ? '•' : 0], ['entradas', '🎟️', 'Entradas', this.tickets.filter((t) => t.status === 'disponible').length], ['transporte', '🚕', 'Transporte', 0], ['reloj', '⏱️', 'Reloj', 0], ['galeria', '🖼️', 'Galería', 0], ['mapa', '🗺️', 'Mapa', 0]];
       body.append(h('div', { class: 'ph-apps' }, apps.map(([id, ic, name, badge]) => h('button', { class: 'ph-app', onclick: () => {
         if (id === 'galeria') { g.screens.pause('galeria'); return; }
         if (id === 'mapa') { g.screens.pause('mapa'); return; }
@@ -309,6 +309,19 @@ export class Phone {
       const t = this.tickets.find((x) => x.id === this.sel);
       body.append(h('div', { class: 'muted', style: { padding: '4px 8px 8px' } }, 'Van a estar en la gradería en tu próxima cobertura, cerca de tu zona de prensa. ¡Buscalos y tomales una foto!'));
       for (const c of CONTACTS.filter((x) => x.family || x.friend)) body.append(h('button', { class: 'ph-row', onclick: () => { if (t && t.status === 'disponible') { this.giveTicket(t, c.id); this.go('chat', c.id); } } }, h('span', { class: 'av', style: { background: c.color } }, c.emoji), h('span', { class: 'mid' }, h('b', {}, c.name), h('span', { class: 'prev' }, c.family ? 'Familia' : 'Amigo'))));
+    } else if (V === 'transporte') {
+      title('Transporte');
+      const tr = g.travel, st = tr?.status();
+      if (!tr || !g.city) body.append(h('div', { class: 'muted', style: { padding: '12px' } }, 'No disponible aquí.'));
+      else {
+        const qU = tr.rideQuote('uber'), qT = tr.rideQuote('taxi'), dest = qU.toStadium ? 'al estadio' : 'a tu casa';
+        body.append(h('div', { class: 'ph-profile' }, h('span', { class: 'av' }, '🚌'), h('div', {}, h('b', {}, 'Bus Barrio – Estadio'), h('div', { class: 'muted' }, st.bus), h('div', { class: 'muted' }, 'Pasaje ₡350. Subí en cualquier parada de la avenida.'))));
+        if (st.ride) body.append(h('div', { class: 'ph-profile' }, h('span', { class: 'av' }, '📍'), h('div', {}, h('b', {}, 'Tu viaje'), h('div', { class: 'muted' }, st.ride))));
+        else if (!tr.mode) body.append(h('div', { class: 'ph-replies' },
+          h('button', { class: 'btn small primary', onclick: () => { if (tr.requestRide('uber')) g.resume(); } }, `📱 Pedir un Uber ${dest} · ₡${qU.price.toLocaleString('es-CR')}`),
+          h('button', { class: 'btn small primary', onclick: () => { if (tr.requestRide('taxi')) g.resume(); } }, `🚕 Llamar un taxi ${dest} · ₡${qT.price.toLocaleString('es-CR')}`)));
+        body.append(h('div', { class: 'muted', style: { padding: '8px', fontSize: '12px' } }, '🚗 Tu carro está parqueado frente a tu casa. Mientras viajás: T adelanta el viaje y C cambia la cámara.'));
+      }
     } else if (V === 'reloj') {
       title('Reloj');
       body.append(h('div', { class: 'ph-wall' }, h('div', { class: 'ph-bigclock' }, formatClock(g.clock)), h('div', {}, this.kickoffLine())));

@@ -455,7 +455,9 @@ export class Stadium {
     const pz0 = z0 + 1, pz1 = Math.min(z1 - 0.5, z0 + 12), px0 = -24, doorZ = (pz0 + pz1) / 2;
     const segA = doorZ - 0.65 - z0, segB = z1 - (doorZ + 0.65);
     W(x0, z0 + segA / 2, 0.3, segA); W(x0, z1 - segB / 2, 0.3, segB);
-    W(x1, (z0 + z1) / 2, 0.3, z1 - z0);
+    // Pared este con puerta a la zona de comidas (cerca del frente del pasillo)
+    const fdz0 = z0 + 0.3, fdz1 = z0 + 1.75;
+    W(x1, (fdz1 + z1) / 2, 0.3, z1 - fdz1); this.box(0.3, H - 2.5, fdz1 - z0, this.m.wallInt, x1, 2.5 + (H - 2.5) / 2, (z0 + fdz1) / 2, { cast: false });
     // Pared frontal: túnel (x -3..3) y puertas de vestuarios (huecos de 1.2 m centrados en x=±4.6)
     W(-8.6, z0, 6.8, 0.3); W(-3.5, z0, 1.0, 0.3); W(3.5, z0, 1.0, 0.3); W(8.6, z0, 6.8, 0.3);
     this.box(6, H - 3.0, 0.3, this.m.wallInt, 0, 3.0 + (H - 3.0) / 2, z0, { cast: false });
@@ -514,6 +516,7 @@ export class Stadium {
       ps2.position.set(x1 - 0.17, 2.45, bz); ps2.rotation.y = -Math.PI / 2; this.group.add(ps2);
       this.spots.prepBench = new THREE.Vector3(x1 - 2.1, 0.52, bz); this.spots.prepStand = new THREE.Vector3(x1 - 3.3, 0, bz);
     }
+    this.buildFoodCourt(x1, z0, z1, H, W, (fdz0 + fdz1) / 2);
     this.spots.laptop = new THREE.Vector3(-18, 0, pz0 + 2 - 0.9);
     this.spots.pressRoom = new THREE.Vector3(-14, 0, doorZ);
     this.spots.tunnelMouth = new THREE.Vector3(0, 0, APRON_Z - 1.5);
@@ -521,6 +524,57 @@ export class Stadium {
     // Señales de dirección
     const s2 = new THREE.Mesh(new THREE.PlaneGeometry(3, 0.5), new THREE.MeshBasicMaterial({ map: TX.signTexture('← PRENSA   |   CANCHA ↑', '#222', '#fff', 768, 128, 'bold 52px Arial') }));
     s2.position.set(0, 3.0, z1 - 0.2); s2.rotation.y = Math.PI; this.group.add(s2);
+  }
+  // Zona de comidas bajo la tribuna principal: puestos, mesas altas, pantallas con el partido
+  buildFoodCourt(xa, z0, z1, H, W, doorZ) {
+    const xb = Math.min(xa + 22, APRON_X - 2), cx = (xa + xb) / 2, cz = (z0 + z1) / 2, d = z1 - z0, w = xb - xa;
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: TX.tileTexture('#d9cfc1', '#c7baa6', [w / 1.2, d / 1.2]), roughness: 0.5 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.set(cx, 0.012, cz); floor.receiveShadow = true; this.group.add(floor);
+    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), this.m.concreteDark); ceil.rotation.x = Math.PI / 2; ceil.position.set(cx, H, cz); this.group.add(ceil);
+    this.col.add(xa, H, z0, xb, H + 0.4, z1, 'nostand');
+    W(cx, z0, w, 0.3); W(cx, z1, w, 0.3); W(xb, cz, 0.3, d);
+    const team = this.home.colors;
+    // Letrero sobre la puerta (lado del pasillo) y adentro
+    for (const [x, ry] of [[xa - 0.17, -Math.PI / 2], [xa + 0.17, Math.PI / 2]]) { const s = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.42), new THREE.MeshBasicMaterial({ map: TX.signTexture('🍔 ZONA DE COMIDAS', '#c8102e', '#ffffff', 512, 90, 'bold 46px Arial') })); s.position.set(x, 2.85, doorZ); s.rotation.y = ry; this.group.add(s); }
+    // Puestos a lo largo de la pared del frente
+    const STALLS = [
+      { kind: 'chifrijo', name: 'Chifrijos El Morado', bg: '#6d1f3a', fg: '#ffffff' },
+      { kind: 'perros', name: 'Perros Calientes La Barra', bg: '#e63946', fg: '#ffd166' },
+      { kind: 'granizados', name: 'Granizados y Copos', bg: '#2a9d8f', fg: '#ffffff' },
+      { kind: 'pizza', name: 'Pizza y Empanadas', bg: '#f4a261', fg: '#3a1a00' },
+    ];
+    this.foodStalls = [];
+    const sw = Math.min(4.6, (w - 1.5) / STALLS.length), counterM = stdMat('#e9e9e9', 0.4, 0.1), steelM = this.m.steel;
+    STALLS.forEach((S0, i) => {
+      const sx = xa + 1.0 + sw * (i + 0.5), szc = z0 + 1.3;
+      this.box(sw - 0.4, 1.05, 0.7, counterM, sx, 0.52, szc + 0.55); this.col.addCentered(sx, szc + 0.55, sw - 0.4, 0.7, 1.1, 0, 'nostand');
+      this.box(sw - 0.3, 0.05, 0.85, steelM, sx, 1.07, szc + 0.55, { cast: false });
+      // Panel trasero con menú iluminado y toldo
+      const menu = new THREE.Mesh(new THREE.PlaneGeometry(sw - 0.5, 1.0), new THREE.MeshStandardMaterial({ map: TX.signTexture(S0.name.toUpperCase(), S0.bg, S0.fg, 768, 170, 'bold 58px Arial'), emissive: 0xffffff, emissiveIntensity: 0.5 }));
+      menu.material.emissiveMap = menu.material.map; menu.position.set(sx, 2.55, z0 + 0.17); this.group.add(menu);
+      const awn = new THREE.Mesh(new THREE.BoxGeometry(sw - 0.3, 0.06, 1.0), new THREE.MeshStandardMaterial({ map: TX.fabricTexture(S0.bg, '#ffffff'), roughness: 0.8 }));
+      awn.position.set(sx, 3.05, szc + 0.35); awn.rotation.x = -0.25; this.group.add(awn);
+      // Productos en el mostrador y en la repisa trasera
+      for (let k = 0; k < 5; k++) { const c = [S0.bg, '#ffd166', '#ffffff', '#8d5a3b', '#2a9d8f'][k]; this.box(0.18, 0.14, 0.18, stdMat(c, 0.5), sx - sw / 2 + 0.5 + k * (sw - 1) / 4, 1.17, szc + 0.5, { cast: false }); }
+      this.box(sw - 0.5, 0.04, 0.35, steelM, sx, 1.55, z0 + 0.35, { cast: false });
+      this.foodStalls.push({ ...S0, counter: new THREE.Vector3(sx, 1, szc + 1.3), vendor: new THREE.Vector3(sx, 0, szc - 0.15), vendorYaw: 0 });
+    });
+    // Mesas altas con banquitos
+    const tM = stdMat('#3a3f45', 0.4, 0.5), topM = new THREE.MeshStandardMaterial({ map: TX.woodTexture(), roughness: 0.6 });
+    this.foodTables = [];
+    for (let i = 0; i < 3; i++) {
+      const tx = xa + 3 + i * (w - 6) / 2, tz = z0 + d * 0.66;
+      this.box(0.9, 0.05, 0.9, topM, tx, 1.05, tz); this.box(0.08, 1.03, 0.08, tM, tx, 0.52, tz, { cast: false });
+      this.col.addCentered(tx, tz, 0.9, 0.9, 1.1, 0, 'nostand'); this.foodTables.push(new THREE.Vector3(tx, 0, tz));
+    }
+    // Pantallas con el partido y basureros
+    for (const k of [0.3, 0.75]) { const tv = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.0), new THREE.MeshStandardMaterial({ map: TX.signTexture('⚽ EN VIVO', '#0a7a3a', '#ffffff', 512, 288, 'bold 64px Arial'), emissive: 0xffffff, emissiveIntensity: 0.9 })); tv.material.emissiveMap = tv.material.map; tv.position.set(xa + w * k, 2.45, z1 - 0.17); tv.rotation.y = Math.PI; this.group.add(tv); }
+    for (const k of [0.15, 0.95]) { this.box(0.45, 0.8, 0.45, stdMat(team.primary, 0.6), xa + w * k, 0.4, z1 - 0.5); this.col.addCentered(xa + w * k, z1 - 0.5, 0.45, 0.45, 0.8); }
+    // Luz del salón (cálida) y lámparas
+    const pl = new THREE.PointLight(0xffe7c4, 26, 22, 1.5); pl.position.set(cx, H - 0.4, cz); this.group.add(pl);
+    const lampM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff1d6, emissiveIntensity: 1.8 });
+    for (let k = 0; k < 3; k++) this.box(1.6, 0.05, 0.3, lampM, xa + w * (k + 0.5) / 3, H - 0.03, cz, { cast: false });
+    this.spots.foodCourt = new THREE.Vector3(cx, 0, cz);
   }
   buildSecurity() {
     const gz = this.gateZ, cfg = this.cfg;

@@ -34,6 +34,7 @@ import { Story } from './Story.js';
 import { Phone } from '../phone/Phone.js';
 import { CrowdLife } from '../world/CrowdLife.js';
 import { DroneCam } from '../cinema/DroneCam.js';
+import { Travel } from '../world/Travel.js';
 import { clamp } from '../core/MathUtil.js';
 
 export class Game {
@@ -56,7 +57,7 @@ export class Game {
     this.interaction = new InteractionSystem(this); this.photoMode = new PhotoMode(this);
     this.player = new PlayerController(this); this.follow = new FollowCamera(this, this.camera);
     this.post = new PostFX(this); this.scene.add(this.camera); this.viewModel = new ViewModel(this);
-    this.phone = new Phone(this); this.crowdLife = new CrowdLife(this); this.drone = new DroneCam(this);
+    this.phone = new Phone(this); this.crowdLife = new CrowdLife(this); this.drone = new DroneCam(this); this.travel = new Travel(this);
     this.state = 'boot'; this.clock = 15 * 60; this.time = 0; this.fps = 60; this.inEvent = false; this.cinematic = false;
     this.playerName = 'Fotógrafo'; this.profileId = null; this.menuT = 0;
     this.resize(); window.addEventListener('resize', () => this.resize());
@@ -126,8 +127,9 @@ export class Game {
     this.career.startEvent(ev); this.inEvent = true;
     this.inventory.rechargeAll(); this.inventory.cardUsed = 0;
     this.story.setup(ev, intro);
-    const P = this.city.P;
-    if (intro) this.player.place(-118, P + 2, Math.PI / 2); else this.player.place(-72, P + 2, Math.PI / 2);
+    // Se sale desde la casa: carro propio, bus, taxi o Uber
+    this.travel.setup(true);
+    const H = this.city.spots.home; this.player.place(H.x, H.z, Math.PI / 2);
     this.player.setCameraEquipped(false); this.player.crouch = false;
     this.follow.yaw = Math.PI / 2; this.follow.pitch = 0.15; this.follow.snap(this.player);
     this.state = 'play'; this.input.wantLock = true;
@@ -182,6 +184,7 @@ export class Game {
     this.buildLevel(ev);
     this.career.startEvent(ev); this.inEvent = true;
     this.story.setup(ev, false);
+    this.travel.setup(false);
     // Directo a la cancha: acreditado, preparado y con la cámara colgada
     this.missions.active = [];
     inv.credential = { eventId: 'arcade', event: 'Arcade', home: cfg.home, away: cfg.away, stadium: STADIUMS[cfg.stadium].name, date: '', number: 'ARC-001' };
@@ -262,6 +265,7 @@ export class Game {
   handleInput() {
     const inp = this.input, pm = this.photoMode, p = this.player;
     if (this.drone.active) { if (inp.keyPressed('Escape')) this.drone.exit(); return; }
+    if (this.travel.mode) { if (inp.keyPressed('Escape') || inp.padPressed('pause')) this.onEscape(); else if (!this.ui.screen && (inp.keyPressed(inp.bind('phone')) || (inp.padPressed('phone')))) { inp.consumePad(); this.phone.open(); } return; }
     if (inp.keyPressed('Escape') || inp.padPressed('pause')) this.onEscape();
     if (this.ui.screenName === 'phone' && (inp.keyPressed(inp.bind('phone')) || inp.padPressed('phone'))) { inp.consumePad(); this.resume(); return; }
     if (this.ui.screen || this.ui.dialogueActive || this.cinematic) return;
@@ -347,7 +351,7 @@ export class Game {
     this.handleInput();
     const paused = !!this.ui.screen;
     if (paused) { this.phone.update(dt); this.ui.update(dt); return; }
-    const freeMove = !this.ui.dialogueActive && !this.cinematic && !this.drone.active;
+    const freeMove = !this.ui.dialogueActive && !this.cinematic && !this.drone.active && !this.travel.mode;
     if (!this.photoMode.active) {
       this.follow.update(dt, this.input, p, freeMove && (this.input.locked || this.input.pad));
       p.update(dt, this.input, this.follow.yaw, freeMove);
@@ -380,13 +384,15 @@ export class Game {
       if (m && Math.floor(this.time * 2) !== this.sbTick) { this.sbTick = Math.floor(this.time * 2); st.updateScoreboard({ home: m.score[0], away: m.score[1], minute: m.minute, phase: m.phase === 'warmup' ? 'PREVIA' : m.half === 1 ? '1T' : '2T', message: m.phase === 'goal' ? '¡¡¡GOOOL!!!' : m.phase === 'halftime' ? 'ENTRETIEMPO' : m.phase === 'fulltime' ? 'FINAL' : null }); }
     }
     if (this.city) { this.city.update(dt, p.pos, this.audio); }
+    const farFromStadium = st && p.pos.x < -230;
+    if (st) st.group.visible = !farFromStadium;
     for (const n of this.story.npcs) {
       const inCity = n.root.parent === this.city?.group;
-      const vis = inCity ? !deepInside : !outside || n === this.story.guard;
+      const vis = (inCity ? !deepInside : !outside || n === this.story.guard) && Math.abs(n.pos.x - p.pos.x) < 170;
       n.root.visible = vis;
       if (vis && n.pos.distanceTo(p.pos) < 140) n.update(dt, p.pos);
     }
-    this.story.update(dt); this.rules.update(dt); this.crowdLife.update(dt); this.phone.update(dt);
+    this.story.update(dt); this.rules.update(dt); this.crowdLife.update(dt); this.phone.update(dt); this.travel.update(dt);
     this.env.update(dt, st && Math.abs(p.pos.x) < 75 && Math.abs(p.pos.z) < 48 ? new THREE.Vector3(0, 0, 0) : this.camera.position, this.time, this.clock / 60);
     // Audio
     const interior = st && p.pos.z > APRON_Z + 0.5 && p.pos.z < st.gateZ && Math.abs(p.pos.x) < 25;

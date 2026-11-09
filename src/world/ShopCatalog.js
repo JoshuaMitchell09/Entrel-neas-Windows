@@ -33,12 +33,45 @@ export const CATALOG = {
     { id: 'cerveza', icon: '🍺', name: 'Cerveza nacional', price: 1800, desc: 'No es buena idea antes de trabajar: +55 % de trepidación por 5 min.', fx: { tipsy: 300 }, adult: true },
   ],
 };
+// Puestos de la zona de comidas del estadio
+CATALOG.chifrijo = [
+  { id: 'chifrijo_e', icon: '🍲', name: 'Chifrijo de estadio', price: 3000, desc: 'Energía para todo el partido (10 min).', fx: { energy: 600, stamina: 1 } },
+  { id: 'chicharron', icon: '🥓', name: 'Chicharrones con limón', price: 2500, desc: 'Energía 6 min.', fx: { energy: 360, stamina: 1 } },
+  { id: 'gaseosa_e', icon: '🥤', name: 'Gaseosa en vaso', price: 1200, desc: 'Energía al máximo y aguante 3 min.', fx: { energy: 180, stamina: 1 } },
+  { id: 'agua_e', icon: '💧', name: 'Agua', price: 800, desc: 'Hidratación.', fx: { stamina: 1 } },
+];
+CATALOG.perros = [
+  { id: 'perro', icon: '🌭', name: 'Perro caliente', price: 1800, desc: 'Energía 5 min.', fx: { energy: 300, stamina: 1 } },
+  { id: 'perro_esp', icon: '🌭', name: 'Perro especial (con todo)', price: 2600, desc: 'Energía 8 min.', fx: { energy: 480, stamina: 1 } },
+  { id: 'papas_e', icon: '🍟', name: 'Papas fritas', price: 1500, desc: 'Energía 4 min.', fx: { energy: 240, stamina: 1 } },
+  { id: 'cafe_e', icon: '☕', name: 'Café', price: 900, desc: 'Autofoco más rápido (+20 %) por 5 min.', fx: { focus: 300 } },
+];
+CATALOG.granizados = [
+  { id: 'granizado', icon: '🍧', name: 'Granizado con leche en polvo', price: 1500, desc: 'Refresca y calma: −28 % de trepidación por 3 min.', fx: { steady: 180, stamina: 1 } },
+  { id: 'copo', icon: '🍧', name: 'Copo de fresa', price: 1200, desc: 'Refresca: energía al máximo.', fx: { stamina: 1, energy: 120 } },
+  { id: 'fresco_e', icon: '🧃', name: 'Fresco de tamarindo', price: 1000, desc: 'Energía al máximo.', fx: { stamina: 1, energy: 150 } },
+  { id: 'chicle_e', icon: '🍬', name: 'Chicles', price: 400, desc: 'Pulso más firme (−28 %) por 4 min.', fx: { steady: 240 } },
+];
+CATALOG.pizza = [
+  { id: 'pizza', icon: '🍕', name: 'Porción de pizza', price: 2200, desc: 'Energía 6 min.', fx: { energy: 360, stamina: 1 } },
+  { id: 'empanada_e', icon: '🥟', name: 'Empanada de carne', price: 1200, desc: 'Energía 4 min.', fx: { energy: 240, stamina: 1 } },
+  { id: 'energetica_e', icon: '⚡', name: 'Bebida energética', price: 1800, desc: 'Energía y autofoco +20 % por 6 min.', fx: { energy: 360, focus: 360, stamina: 1 } },
+  { id: 'agua_p', icon: '💧', name: 'Agua', price: 800, desc: 'Hidratación.', fx: { stamina: 1 } },
+];
 const GREET = {
+  chifrijo: ['¡Chifrijo, chifrijo! ¿Cuántos le pongo?', '¿Con chicharrón extra?', '¡Pura vida! ¿Qué va a ser?'],
+  perros: ['¡Perros, perros calientes!', '¿Con todo o sencillo?', 'Rapidito antes del segundo tiempo, ¿verdad?'],
+  granizados: ['¡Granizados! ¿Con leche en polvo y leche condensada?', 'Hace calor, ¿un copito?', '¿De qué sabor lo quiere?'],
+  pizza: ['¡Pizza recién salida!', '¿Una porción o dos?', 'Las empanadas están calientitas.'],
   pulperia: ['¡Buenas! ¿Qué le damos?', 'Pase adelante. ¿Qué se le ofrece?', '¡Diay! ¿Qué va a llevar hoy?'],
   soda: ['¡Buenas! Hoy el casado está buenísimo.', 'Siéntese donde guste. ¿Qué le sirvo?', 'Tenemos cafecito recién chorreado.'],
   bar: ['¡Pura vida! ¿Viene a ver el partido?', 'Bienvenido/a. Hoy hay boca de chifrijo.', '¿Qué le sirvo, compa?'],
 };
 export const KEEPER_LOOKS = {
+  chifrijo: { skin: '#a86f48', hair: '#120c08', shirt: '#6d1f3a', pants: '#2b2b2b', boots: '#222', height: 1.7, cap: '#ffffff' },
+  perros: { skin: '#c68d63', hair: '#3a2817', shirt: '#e63946', pants: '#2b2b2b', boots: '#222', height: 1.65, female: true, cap: '#ffd166' },
+  granizados: { skin: '#e0ac85', hair: '#5a3b22', shirt: '#2a9d8f', pants: '#2b2b38', boots: '#222', height: 1.74 },
+  pizza: { skin: '#8d5a3b', hair: '#120c08', shirt: '#f4a261', pants: '#2b2b2b', boots: '#222', height: 1.62, female: true },
   pulperia: { skin: '#c68d63', hair: '#3a2817', shirt: '#2a9d8f', pants: '#2b2b38', boots: '#222', height: 1.66, female: true, vest: '#ffffff' },
   soda: { skin: '#a86f48', hair: '#120c08', shirt: '#ffffff', pants: '#2b2b2b', boots: '#222', height: 1.6, female: true, vest: '#c8102e', cap: '#ffffff' },
   bar: { skin: '#e0ac85', hair: '#2b1c12', shirt: '#1b1b1b', pants: '#2b2b2b', boots: '#111', height: 1.78 },

@@ -3,7 +3,9 @@ import * as TX from '../gfx/Textures.js';
 import { stdMat } from '../characters/Humanoid.js';
 import { seededRandom } from '../core/MathUtil.js';
 import { mergeStatic } from '../gfx/Merge.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildShopInterior, SHOP_KINDS } from './ShopInteriors.js';
+import { buildAvenue, AVE_X1 } from './Avenue.js';
 
 const SHOPS = [
   ['Soda La Bendición', '#f6d55c', '#7a2e00', '#e9d8a6'], ['Pulpería El Carmen', '#2a9d8f', '#ffffff', '#f4a261'],
@@ -23,11 +25,11 @@ export class City {
     this.rnd = seededRandom(42);
     this.cars = []; this.spots = {}; this.lamps = []; this.vendorSpots = []; this.shops = [];
     this.night = game.env.time === 'night';
-    this.buildGround(); this.buildStreet(); this.buildBuildings(); this.buildPlaza(); this.buildProps(); this.buildCars(); this.bounds();
+    this.buildGround(); this.buildStreet(); this.buildBuildings(); buildAvenue(this); this.buildPlaza(); this.buildProps(); this.buildCars(); this.bounds();
     // Luz compartida de interiores (se crea desde el inicio para no recompilar materiales al entrar)
     if (this.shops.length) { this.shopLight = new THREE.PointLight(0xfff0d8, 0, 13, 1.4); this.group.add(this.shopLight); }
     for (const c of this.cars) c.obj.userData.noMerge = true;
-    this.merged = mergeStatic(this.group);
+    this.merged = mergeStatic(this.group, 300);
   }
   box(w, h, d, mat, x, y, z, { cast = true, receive = true, ry = 0, parent = this.group } = {}) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = cast; m.receiveShadow = receive; parent.add(m); return m;
@@ -59,23 +61,23 @@ export class City {
   building(x, z, w, d, h, facing, shop, color, interior = null) {
     const env = this.game.env;
     // facing: +1 la fachada mira hacia +z ; -1 hacia -z
-    const wallMat = new THREE.MeshStandardMaterial({ map: TX.paintedWallTexture(color, Math.floor(this.rnd() * 99), { band: TX.shade(color, -40) }), roughness: 0.9 });
-    wallMat.map.repeat.set(w / 6, h / 5);
+    // Materiales compartidos (por color) para que la geometría se fusione en pocos draw calls
+    const wallMat = this.carMat('wall' + color, () => { const m = new THREE.MeshStandardMaterial({ map: TX.paintedWallTexture(color, color.length * 7 + color.charCodeAt(2), { band: TX.shade(color, -40) }), roughness: 0.9 }); m.map.repeat.set(2, 1); return m; });
     const fz = z + facing * (d / 2 + 0.01);
     let b = null;
     if (interior) this.shops.push(buildShopInterior(this, interior, x, z, w, d, h, wallMat));
     else { b = this.box(w, h, d, wallMat, x, h / 2, z); this.col.addCentered(x, z, w, d, h); }
     // Alero de zinc
-    const roofM = new THREE.MeshStandardMaterial({ map: TX.zincRoofTexture([w / 3, 1]), roughness: 0.5, metalness: 0.6 });
+    const roofM = this.carMat('zinc', () => new THREE.MeshStandardMaterial({ map: TX.zincRoofTexture([4, 1]), roughness: 0.5, metalness: 0.6 }));
     const eave = this.box(w + 0.6, 0.06, 1.6, roofM, x, h * 0.55 > 3.2 ? 3.2 : h * 0.55, z + facing * (d / 2 + 0.75)); eave.rotation.x = facing * 0.18;
     for (const s of [-1, 1]) this.box(0.08, 3.1, 0.08, stdMat('#333333', 0.5, 0.6), x + s * (w / 2 - 0.1), 1.55, z + facing * (d / 2 + 1.45), { cast: true });
     // Puerta y ventanas con verjas
-    const winTex = TX.windowTexture(false), litTex = TX.windowTexture(true), lit = this.rnd() > 0.3;
-    const winM = new THREE.MeshStandardMaterial({ map: winTex, roughness: 0.2, metalness: 0.2, emissive: 0xffd28a, emissiveIntensity: 0, emissiveMap: litTex }); if (lit) env.register(winM, 'emissiveIntensity', 0, 0.45);
+    const lit = this.rnd() > 0.3;
+    const winM = this.carMat(lit ? 'winLit' : 'winDark', () => { const m = new THREE.MeshStandardMaterial({ map: TX.windowTexture(false), roughness: 0.2, metalness: 0.2, emissive: 0xffd28a, emissiveIntensity: 0, emissiveMap: TX.windowTexture(true) }); if (lit) env.register(m, 'emissiveIntensity', 0, 0.45); return m; });
     const doorM = stdMat(TX.shade(color, -70), 0.6);
     const doorX = x + (this.rnd() - 0.5) * (w - 3);
     if (!interior) {
-      const door = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.4), shop ? new THREE.MeshStandardMaterial({ color: 0x2a2f33, roughness: 0.3, metalness: 0.5 }) : doorM);
+      const door = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 2.4), shop ? this.carMat('shopDoor', () => new THREE.MeshStandardMaterial({ color: 0x2a2f33, roughness: 0.3, metalness: 0.5 })) : doorM);
       door.position.set(doorX, 1.2, fz + facing * 0.01); if (facing < 0) door.rotation.y = Math.PI; this.group.add(door);
     }
     for (let wx = x - w / 2 + 1.2; wx < x + w / 2 - 1; wx += 2.4) {
@@ -226,25 +228,41 @@ export class City {
     this.box(4, 0.08, 1.8, stdMat('#2b2d42', 0.5, 0.5), bx, 2.6, bz); this.box(4, 2.5, 0.05, new THREE.MeshStandardMaterial({ map: TX.adTexture('CAFÉ ALTURA', '#3b2416', '#f5d7a1', 'Grano de altura'), roughness: 0.4 }), bx, 1.3, bz - 0.85);
     this.col.addCentered(bx, bz - 0.85, 4, 0.2, 2.6);
   }
+  // Materiales compartidos por color: los carros parqueados se fusionan entre sí y los que se mueven
+  // quedan en ~5 mallas en lugar de ~12.
+  carMat(key, make) { this.carMats ||= new Map(); if (!this.carMats.has(key)) this.carMats.set(key, make()); return this.carMats.get(key); }
   makeCar(color, bus = false) {
+    const g = this.makeCarRaw(color, bus);
+    // Fusionar piezas por material dentro del carro
+    const byMat = new Map();
+    g.updateMatrixWorld(true);
+    for (const ch of [...g.children]) { if (!ch.isMesh) continue; if (!byMat.has(ch.material)) byMat.set(ch.material, []); byMat.get(ch.material).push(ch); }
+    for (const [mat, list] of byMat) {
+      if (list.length < 2) continue;
+      const geos = list.map((m) => { const gg = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()); for (const k of Object.keys(gg.attributes)) if (!['position', 'normal', 'uv'].includes(k)) gg.deleteAttribute(k); gg.applyMatrix4(m.matrix); return gg; });
+      const merged = new THREE.Mesh(mergeGeometries(geos, false), mat); merged.castShadow = list[0].castShadow; g.add(merged); for (const m of list) g.remove(m);
+    }
+    return g;
+  }
+  makeCarRaw(color, bus = false) {
     const g = new THREE.Group();
     const L = bus ? 11 : 4.2, W = bus ? 2.5 : 1.8, H = bus ? 3 : 1.4;
-    const bodyM = new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.6 });
+    const bodyM = this.carMat('body' + color, () => new THREE.MeshStandardMaterial({ color, roughness: 0.25, metalness: 0.6 }));
     const body = new THREE.Mesh(new THREE.BoxGeometry(L, H * 0.5, W), bodyM); body.position.y = 0.35 + H * 0.25; body.castShadow = true; g.add(body);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(bus ? L * 0.98 : L * 0.55, H * 0.45, W * 0.92), bus ? bodyM : new THREE.MeshStandardMaterial({ color: 0x1b2730, roughness: 0.05, metalness: 0.8 }));
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(bus ? L * 0.98 : L * 0.55, H * 0.45, W * 0.92), bus ? bodyM : this.carMat('glass', () => new THREE.MeshStandardMaterial({ color: 0x1b2730, roughness: 0.05, metalness: 0.8 })));
     cab.position.set(bus ? 0 : -L * 0.05, 0.35 + H * 0.72, 0); cab.castShadow = true; g.add(cab);
     if (bus) {
       const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.4), new THREE.MeshBasicMaterial({ map: TX.signTexture('ESTADIO', '#000', '#ffb000', 256, 48, 'bold 36px Arial') }));
       sign.position.set(L / 2 + 0.01, H * 0.9, 0); sign.rotation.y = Math.PI / 2; g.add(sign);
-      const winM = new THREE.MeshStandardMaterial({ color: 0x1b2730, roughness: 0.05, metalness: 0.8 });
+      const winM = this.carMat('glass', () => new THREE.MeshStandardMaterial({ color: 0x1b2730, roughness: 0.05, metalness: 0.8 }));
       for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.PlaneGeometry(L * 0.85, H * 0.3), winM); w.position.set(0, H * 0.7, s * (W / 2 + 0.01)); w.rotation.y = s > 0 ? 0 : Math.PI; g.add(w); }
     }
     const wheelM = stdMat('#151515', 0.8);
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
       const w = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 14), wheelM); w.rotation.x = Math.PI / 2; w.position.set(sx * L * 0.33, 0.34, sz * W / 2); g.add(w);
     }
-    const lightM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2cc, emissiveIntensity: 0.3 }); this.game.env.register(lightM, 'emissiveIntensity', 0.3, 3);
-    const tailM = new THREE.MeshStandardMaterial({ color: 0x550000, emissive: 0xff2020, emissiveIntensity: 0.2 }); this.game.env.register(tailM, 'emissiveIntensity', 0.2, 2);
+    const lightM = this.carMat('head', () => { const m = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2cc, emissiveIntensity: 0.3 }); this.game.env.register(m, 'emissiveIntensity', 0.3, 3); return m; });
+    const tailM = this.carMat('tail', () => { const m = new THREE.MeshStandardMaterial({ color: 0x550000, emissive: 0xff2020, emissiveIntensity: 0.2 }); this.game.env.register(m, 'emissiveIntensity', 0.2, 2); return m; });
     for (const sz of [-1, 1]) { this.box(0.05, 0.15, 0.3, lightM, L / 2, 0.6, sz * W * 0.35, { parent: g, cast: false }); this.box(0.05, 0.15, 0.3, tailM, -L / 2, 0.65, sz * W * 0.35, { parent: g, cast: false }); }
     g.userData.L = L;
     this.group.add(g); return g;
@@ -258,11 +276,11 @@ export class City {
       c.position.set(x, 0, P + 14.8); c.rotation.y = Math.PI;
       this.col.addCentered(x, P + 14.8, 4.3, 1.9, 1.5);
     }
-    // Tráfico en movimiento (dos carriles)
-    for (let i = 0; i < 7; i++) {
-      const dir = i % 2 ? 1 : -1, bus = i === 3;
+    // Tráfico en movimiento (dos carriles) por toda la avenida, desde el barrio hasta el estadio
+    for (let i = 0; i < 16; i++) {
+      const dir = i % 2 ? 1 : -1, bus = false;
       const c = this.makeCar(CAR_COLORS[i % CAR_COLORS.length], bus);
-      c.position.set(-160 + i * 50, 0, P + 10 + (dir > 0 ? -2.8 : 2.8) * 1);
+      c.position.set(AVE_X1 + 20 + i * 60, 0, P + 10 + (dir > 0 ? -2.8 : 2.8) * 1);
       c.rotation.y = dir > 0 ? 0 : Math.PI;
       this.cars.push({ obj: c, dir, speed: bus ? 8 : 10 + this.rnd() * 5, v: 0, lane: P + 10 - dir * 2.8, honk: 0 });
       c.position.z = P + 10 - dir * 2.8;
@@ -270,7 +288,7 @@ export class City {
   }
   bounds() {
     const P = this.P;
-    this.col.add(-175, 0, this.gz, -168, 10, P + 40); this.col.add(168, 0, this.gz, 175, 10, P + 40);
+    this.col.add(-175, 0, this.gz, -168, 10, P - 0.6); this.col.add(168, 0, this.gz, 175, 10, P + 40);
     this.col.add(-175, 0, P + 20.4, 175, 10, P + 22);
   }
   update(dt, playerPos, audio) {
@@ -288,15 +306,18 @@ export class City {
       let target = c.speed;
       // Detenerse si el jugador está en la calzada delante del carro (o en el paso peatonal)
       const ahead = (playerPos.x - c.obj.position.x) * c.dir;
-      const onRoad = playerPos.z > this.P + 4 && playerPos.z < this.P + 16;
+      const onRoad = !this.game.travel?.mode && playerPos.z > this.P + 4 && playerPos.z < this.P + 16;
       const inLane = Math.abs(playerPos.z - c.lane) < 2.4;
       if (onRoad && inLane && ahead > 0 && ahead < 16) { target = 0; if (ahead < 9 && c.honk <= 0 && audio) { audio.honk(c.obj.position); c.honk = 6; } }
+      // El carro del fotógrafo (o un taxi/Uber/bus) también es un obstáculo para el tráfico
+      for (const o of [this.game.travel?.car, this.game.travel?.bus, this.game.travel?.ride]) if (o) { const d = (o.pos.x - c.obj.position.x) * c.dir; if (Math.abs(o.pos.z - c.lane) < 1.8 && d > 0 && d < 12 + (o.L || 4)) target = Math.min(target, Math.max(0, (o.v || 0) * 0.8)); }
       // Respetar distancia con el carro de adelante
       for (const o of this.cars) if (o !== c && o.dir === c.dir) { const d = (o.obj.position.x - c.obj.position.x) * c.dir; if (d > 0 && d < 10 + (o.obj.userData.L || 4)) target = Math.min(target, o.v * 0.8); }
       c.honk -= dt;
       c.v += Math.max(-12 * dt, Math.min(4 * dt, target - c.v));
       c.obj.position.x += c.v * c.dir * dt;
-      if (c.obj.position.x > 185) c.obj.position.x = -185; if (c.obj.position.x < -185) c.obj.position.x = 185;
+      if (c.obj.position.x > 185) c.obj.position.x = AVE_X1 + 5; if (c.obj.position.x < AVE_X1 + 5) c.obj.position.x = 185;
+      c.obj.visible = Math.abs(c.obj.position.x - playerPos.x) < 260;
     }
   }
 }

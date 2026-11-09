@@ -59,6 +59,12 @@ export class UI {
     while (this.toastsEl.children.length > 4) this.toastsEl.removeChild(this.toastsEl.firstChild);
     setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = 0; setTimeout(() => el.remove(), 400); }, ms);
   }
+  // Subtítulos (entrevistas): quién habla y qué dice, abajo al centro
+  subtitle(who, text, sec = 4.5) {
+    if (!this.subEl) { this.subEl = h('div', { class: 'subtitle' }); this.root.appendChild(this.subEl); }
+    this.subEl.innerHTML = ''; this.subEl.append(h('b', {}, who + ': '), text); this.subEl.classList.add('show');
+    clearTimeout(this.subT); this.subT = setTimeout(() => this.subEl.classList.remove('show'), sec * 1000);
+  }
   feed(text) {
     const m = this.game.match;
     const el = h('div', {}, h('b', {}, m ? `${Math.floor(m.minute)}'` : ''), text);

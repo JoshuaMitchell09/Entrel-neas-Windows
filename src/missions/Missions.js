@@ -13,6 +13,7 @@ export const MISSION_DEFS = {
   m_lluvia: { title: 'Agua y barro', desc: 'Conseguí 3 fotos de entradas o disputas bajo la lluvia (mínimo 60).', kind: 'event', target: 3, photo: { tags: ['entrada', 'disputa'], min: 60 }, reward: { money: 40000, rep: 3 } },
   m_clasico: { title: 'El clásico', desc: 'Conseguí 10 fotografías de calidad superior a 80.', kind: 'event', target: 10, photo: { tags: null, min: 80 }, reward: { money: 120000, rep: 6 } },
   m_portada: { title: 'La portada', desc: 'Capturá una imagen digna de portada (momento clave, 85+ y buena composición).', kind: 'event', target: 1, photo: { tags: ['portada'], min: 85 }, reward: { money: 90000, rep: 6 } },
+  m_entrevista: { title: 'Zona mixta', desc: 'Fotografiá la entrevista al jugador del partido junto al túnel (calidad mínima 45).', kind: 'event', target: 1, photo: { tags: ['entrevista'], min: 45 }, reward: { money: 15000, rep: 2 } },
   m_final: { title: 'Campeones', desc: 'Fotografiá la celebración del campeón al final del partido (mínimo 60).', kind: 'event', target: 1, photo: { tags: ['final', 'celebracion'], min: 60, phase: 'fulltime' }, reward: { money: 80000, rep: 5 } },
 };
 export class MissionSystem {

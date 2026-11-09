@@ -52,7 +52,7 @@ export class Story {
   // Prepara NPC, interacciones y objetivos de un evento.
   setup(ev, intro) {
     const g = this.game, st = g.stadium, city = g.city, P = city.P, I = g.interaction;
-    this.ev = ev; this.intro = intro; this.stage = 'street'; this.gateHinted = false; this.designated = null;
+    this.ev = ev; this.intro = intro; this.stage = g.arcade ? 'street' : 'home'; this.gateHinted = false; this.designated = null;
     this.bindMatch(); this.briefed = false; this.kickedOff = false; this.inBowlOnce = false;
     this.clear();
     const add = (parent, o) => { const n = new NPC(g, parent, o); this.npcs.push(n); return n; };
@@ -97,8 +97,17 @@ export class Story {
       k.mapLabel = sh.name; shopNPCs.push([sh, k]);
       for (const seat of sh.seats) if (Math.random() < (sh.kind === 'bar' ? 0.55 : 0.4)) add(city.group, { name: 'Cliente', look: randomFan(Math.random() < 0.6 ? home : away), pos: seat.pos.clone().setY(0), yaw: seat.yaw, idle: seat.bar ? 'loco' : 'sit', chatty: 0.8 });
     }
+    // Zona de comidas del estadio: vendedores en cada puesto y aficionados comiendo
+    const stallNPCs = [];
+    for (const fs of st.foodStalls || []) {
+      const v = add(st.group, { name: 'Vendedor', role: 'story', look: KEEPER_LOOKS[fs.kind], pos: fs.vendor, yaw: fs.vendorYaw, idle: 'loco', chatty: 0.6 });
+      v.mapLabel = fs.name; stallNPCs.push([fs, v]);
+    }
+    for (const tp of st.foodTables || []) for (let k = 0; k < 2; k++) if (Math.random() < 0.75) { const a = k * Math.PI + rand(-0.4, 0.4); add(st.group, { name: 'Aficionado', look: randomFan(Math.random() < 0.7 ? home : away), pos: tp.clone().add(new THREE.Vector3(Math.sin(a) * 0.75, 0, Math.cos(a) * 0.75)), yaw: a + Math.PI, idle: pick(['talk', 'loco', 'talk']), chatty: 0.9 }); }
+    if (st.foodStalls) for (let k = 0; k < 3; k++) { const fs = pick(st.foodStalls); add(st.group, { name: 'Aficionado', look: randomFan(home), pos: fs.counter.clone().setY(0).add(new THREE.Vector3(rand(-0.8, 0.8), 0, 0.6 + k * 0.1)), yaw: Math.PI, idle: 'loco', chatty: 0.5 }); }
     // ---------- Interacciones ----------
     I.clear();
+    for (const [fs, v] of stallNPCs) I.add({ position: fs.counter, radius: 1.8, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Comprar en ${fs.name}`, onInteract: () => { v.playOnce('talk', 3); g.audio?.talk?.(v.pos.clone().setY(1.6), 1.2, 1.2); openShopCounter(g, fs); } });
     for (const [sh, k] of shopNPCs) I.add({ position: sh.counter, radius: 2.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Comprar en ${sh.name}`, onInteract: () => { k.playOnce('talk', 3); g.audio?.talk?.(k.pos.clone().setY(1.6), 1.2, sh.kind === 'bar' ? 0.9 : 1.4); openShopCounter(g, sh); } });
     I.add({ position: this.mariana.pos.clone().setY(1.2).add(new THREE.Vector3(0, 0, 2)), radius: 3.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con Mariana`, onInteract: () => this.talkMariana() });
     I.add({ position: st.spots.guard.clone().setY(1.2), radius: 3.5, prompt: () => this.stage === 'street' || this.stage === 'credential' ? `<kbd>${g.ui.key('interact')}</kbd>Presentarse en seguridad` : null, onInteract: () => this.security() });
@@ -121,18 +130,19 @@ export class Story {
     this.setObjective();
     // Hora de llegada: normal (~media hora antes) u horas antes del saque
     const arrive = ev.arrive || (intro ? 34 : 26), early = arrive > 45;
-    g.clock = ev.kickoff - arrive;
+    g.clock = ev.kickoff - arrive - (g.arcade ? 0 : 18); // se sale de la casa: tiempo para el viaje
     if (g.career.eventState) { g.career.eventState.early = early ? arrive : 0; g.career.eventState.followersAtStart = g.phone.social.followers; }
     if (early) { g.env.dynamic = true; g.env.setHour(g.clock / 60, true); }
     const guests = g.phone.onEventStart(ev, { early });
     g.crowdLife.setup(ev, guests);
     if (early) setTimeout(() => g.ui.hint('Llegaste temprano', `Faltan ${Math.floor(arrive / 60)} h ${arrive % 60 ? (arrive % 60) + ' min' : ''} para el saque. El estadio se va llenando poco a poco y los equipos salen a calentar 45 min antes.<br><br>Usá el <b>teléfono</b> (<kbd>${g.ui.key('phone')}</kbd>) para escribirle a tu familia, publicar fotos o <b>esperar</b> con el reloj.`, 12000), 1200);
-    if (intro) setTimeout(() => g.ui.hint('Primera cobertura', `Hoy es tu primera cobertura. Recogé tu acreditación y llegá al estadio.<br><br><kbd>W A S D</kbd>moverse · <kbd>Shift</kbd>correr · <kbd>${g.ui.key('interact')}</kbd>interactuar · <kbd>M</kbd>mapa · <kbd>Esc</kbd>pausa`, 14000), 600);
+    setTimeout(() => g.ui.hint(intro ? 'Primera cobertura' : 'Saliendo de casa', `${intro ? 'Hoy es tu primera cobertura. ' : ''}Estás en tu casa. Para llegar al estadio podés:<br>🚗 manejar tu carro (está al frente)<br>🚌 tomar el bus en la parada de la par<br>🚕 pedir un taxi o un Uber con el teléfono (<kbd>${g.ui.key('phone')}</kbd> → Transporte)<br><br><kbd>W A S D</kbd>moverse · <kbd>Shift</kbd>correr · <kbd>${g.ui.key('interact')}</kbd>interactuar · <kbd>M</kbd>mapa · <kbd>Esc</kbd>pausa`, 14000), 600);
   }
   setObjective() {
     if (!this.ev) return;
     const g = this.game, s = this.stage, ko = formatClock(this.ev.kickoff);
     const T = {
+      home: `Salí de tu casa y elegí cómo llegar al estadio: tu carro (frente a la casa), el bus (parada a la par) o pedí un taxi o un Uber con el teléfono (${g.ui.key('phone')}).`,
       street: 'Recogé tu acreditación en el toldo azul de prensa (plaza del estadio).',
       credential: 'Andá al acceso de prensa del estadio y pasá el control de seguridad.',
       inside: g.inventory.prepared ? `Cruzá el túnel y buscá a Kendall Rojas detrás de la portería este. Saque inicial: ${ko}.` : 'Prepará tu equipo en la zona de preparación de prensa (pasillo, a la derecha).',
@@ -147,7 +157,7 @@ export class Story {
   objectivePos() {
     const g = this.game, st = g.stadium;
     if (this.designated && ['briefed', 'match'].includes(this.stage)) return this.objectivePosDesignated();
-    return { street: this.mariana?.pos, credential: st.spots.guard, inside: g.inventory.prepared ? this.alvaro?.pos : st.spots.prepStand, field: this.alvaro?.pos, post: st.spots.laptop }[this.stage] || null;
+    return { home: this.mariana?.pos, street: this.mariana?.pos, credential: st.spots.guard, inside: g.inventory.prepared ? this.alvaro?.pos : st.spots.prepStand, field: this.alvaro?.pos, post: st.spots.laptop }[this.stage] || null;
   }
   async talkMariana() {
     const g = this.game, inv = g.inventory, ev = this.ev, M = { who: 'Mariana Quesada', role: 'Coordinadora de prensa', color: '#0b3d91', initials: 'MQ', pitch: 1.5, pos: this.mariana.pos.clone().setY(1.6) };
@@ -313,6 +323,7 @@ export class Story {
     // Animaciones scriptadas
     for (const t of this.timers.slice()) { t.t += dt; t.fn(Math.min(1, t.t / t.dur)); if (t.t >= t.dur) { this.timers.splice(this.timers.indexOf(t), 1); t.res(); } }
     // Disparadores por ubicación
+    if (this.stage === 'home' && p.x > -172) { this.stage = 'street'; this.setObjective(); g.ui.toast('📍 Llegaste a la zona del estadio. Buscá el toldo azul de acreditaciones.', 'info', 4000); }
     if (this.stage === 'credential' && p.z < st.gateZ + 14 && Math.abs(p.x) < 12 && !this.gateHinted) { this.gateHinted = true; g.ui.toast('Presentá tu acreditación al guardia de seguridad.', 'info'); g.events.emit('story:gate'); g.missions.add('m_seguridad'); }
     const inBowl = Math.abs(p.x) < 64 && Math.abs(p.z) < 43.6;
     if (inBowl && !this.inBowlOnce) { this.inBowlOnce = true; if (this.stage === 'inside') { this.stage = 'field'; this.setObjective(); } g.ui.toast(`${g.female ? 'Bienvenida' : 'Bienvenido'} al ${STADIUMS[this.ev.stadium].name}.`, 'info'); }
@@ -333,9 +344,17 @@ export class Story {
   }
   onMatchEnd() {
     const g = this.game; if (!this.ev || !g.inEvent) return;
-    if (g.arcade) { g.arcadeEnd(); return; }
-    this.stage = 'post'; this.setObjective(); g.missions.add('m_entrega');
-    g.ui.toast('¡Final del partido! Entregá tus fotos en la sala de prensa.', 'mission', 5000);
+    const iv = g.match?.interview;
+    const who = iv ? `${iv.mvp.name} (#${iv.mvp.number})` : 'el jugador del partido';
+    if (g.arcade) {
+      g.ui.toast(`🎙️ Entrevista a ${who} en la zona mixta, junto al túnel. Al terminar verás tus resultados.`, 'mission', 6000);
+      g.ui.setObjective(`Fotografiá la entrevista a ${who} junto al túnel. (Esc → Terminar partido para ver resultados ya.)`);
+      let fired = false; const fin = () => { if (!fired) { fired = true; g.arcadeEnd(); } };
+      g.events.on('match:interviewDone', () => setTimeout(fin, 4000)); setTimeout(fin, 70000);
+      return;
+    }
+    this.stage = 'post'; this.setObjective(); g.missions.add('m_entrevista'); g.missions.add('m_entrega');
+    g.ui.toast(`¡Final del partido! 🎙️ ${who} da la entrevista en la zona mixta, junto al túnel. Después entregá tus fotos en la sala de prensa.`, 'mission', 7000);
     g.saves.save('auto');
   }
 }

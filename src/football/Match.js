@@ -3,6 +3,7 @@ import { Ball, BALL_R } from './Ball.js';
 import { Footballer } from './Footballer.js';
 import { Humanoid, SKIN_TONES, HAIR_COLORS } from '../characters/Humanoid.js';
 import { squad } from './Teams.js';
+import { Interview } from './Interview.js';
 import { clamp, rand, pick, dampAngle } from '../core/MathUtil.js';
 
 const L = 105, W = 68, HL = L / 2, HW = W / 2, GOAL_HW = 3.66, BAR = 2.44;
@@ -29,6 +30,8 @@ export const EVENT_INFO = {
   salida: { label: 'Salida de los equipos', weight: 58, sigma: 6, window: 16 },
   formacion: { label: 'Foto oficial del equipo', weight: 64, sigma: 5, window: 12 },
   sorteo: { label: 'Sorteo de la moneda', weight: 70, sigma: 0.9, window: 3 },
+  trifulca: { label: 'Trifulca entre jugadores', weight: 82, sigma: 1.6, window: 5 },
+  entrevista: { label: 'Entrevista al jugador del partido', weight: 72, sigma: 6, window: 14 },
 };
 // Formación 4-4-2 en marco de ataque: x de -1 (propia portería) a 1 (rival); z de -1 a 1.
 const FORM = [
@@ -568,8 +571,11 @@ export class Match {
     this.addFeed(`Falta de ${def.name} (#${def.number}) sobre ${victim.name}.`);
     // Tarjetas
     const r = Math.random();
+    const hard = r < 0.2 || Math.random() < 0.25;
     if (r < 0.025 || (def.yellow && r < 0.18)) this.card(def, true);
     else if (r < 0.2) this.card(def, false);
+    // Falta fuerte: a veces se calientan los ánimos y se arma una trifulca
+    if (hard && !def.sentOff && Math.random() < (this.game.career?.event?.clasico ? 0.55 : 0.32) && this.time - (this.lastScuffle || -999) > 60) this.startScuffle(def, victim);
     // ¿Penal? Falta dentro del área del equipo que defiende.
     const defGoal = -this.goalX(def.team);
     const inBox = Math.abs(victim.pos.x - defGoal) < 16.5 && Math.abs(victim.pos.z) < 20.16 && Math.sign(victim.pos.x) === Math.sign(defGoal);
@@ -579,6 +585,62 @@ export class Match {
       this.excite = 0.9;
       this.setRestart('penalty', victim.team, new THREE.Vector3(defGoal - Math.sign(defGoal) * 11, 0, 0), 4.5);
     } else this.setRestart('free', victim.team, victim.pos.clone(), sim ? 6 : 3);
+  }
+  // ---------- Trifulca: un compañero de la víctima encara al infractor, empujones, se meten a separar y el árbitro saca tarjetas ----------
+  startScuffle(def, victim) {
+    const mates = this.active(victim.team).filter((p) => p !== victim && p.role !== 'GK').sort((a, b) => a.pos.distanceTo(def.pos) - b.pos.distanceTo(def.pos));
+    const agg = mates[0]; if (!agg) return;
+    const near = (team, n, excl) => this.active(team).filter((p) => !excl.includes(p) && p.role !== 'GK').sort((a, b) => a.pos.distanceTo(def.pos) - b.pos.distanceTo(def.pos)).slice(0, n);
+    const helpersA = near(victim.team, 2, [victim, agg]), helpersB = near(def.team, 2, [def]);
+    this.scuffle = { def, agg, victim, helpersA, helpersB, t: 0, stage: 0, center: def.pos.clone(), carded: false };
+    this.lastScuffle = this.time; this.excite = Math.max(this.excite, 0.75);
+  }
+  updateScuffle(dt) {
+    const S = this.scuffle; if (!S) return false;
+    S.t += dt; const { def, agg } = S, c = S.center;
+    const face = (p, q) => p.faceToward(q.pos.x, q.pos.z, dt, 10);
+    // 1) El agresor corre hacia el infractor
+    if (S.stage === 0) {
+      const d = agg.moveToward(def.pos.x, def.pos.z, agg.maxSpeed * 0.95, dt, 9); face(def, agg);
+      if (d < 1.0 || S.t > 4) { S.stage = 1; S.t = 0; agg.vel.set(0, 0, 0); agg.playAnim('confront', 1.4); def.playAnim('confront', 1.4); this.addFeed(`¡Se calientan los ánimos! ${agg.name} encara a ${def.name}.`); this.game.audio?.groan?.(); }
+      return true;
+    }
+    // 2) Encarón cara a cara y empujón
+    if (S.stage === 1) {
+      face(agg, def); face(def, agg); agg.vel.set(0, 0, 0); def.vel.set(0, 0, 0);
+      if (S.t > 1.2 && !S.shoved) {
+        S.shoved = true; agg.playAnim('shove', 0.7);
+        const dx = def.pos.x - agg.pos.x, dz = def.pos.z - agg.pos.z, l = Math.hypot(dx, dz) || 1;
+        setTimeout(() => { if (Math.random() < 0.35) def.ragdoll(dx / l * 0.7, dz / l * 0.7, 1.4); else { def.vel.set(dx / l * 3, 0, dz / l * 3); def.playAnim('confront', 1.2); } }, 250);
+        this.logEvent('trifulca', [agg, def], def.pos, { team: agg.team, peak: this.time + 0.4 }); this.excite = 0.9;
+        this.addFeed(`¡Empujón de ${agg.name}! Se arma la trifulca.`);
+        this.game.events.emit('match:scuffle', S);
+      }
+      if (S.t > 2.4) { S.stage = 2; S.t = 0; }
+      return true;
+    }
+    // 3) Llegan los demás: unos separan, otros reclaman; el árbitro entra y saca tarjetas
+    if (S.stage === 2) {
+      const all = [...S.helpersA, ...S.helpersB];
+      all.forEach((p, i) => {
+        const target = i % 2 === 0 ? (p.team === agg.team ? agg : def) : this.ref;
+        const off = (i % 2 ? 1.2 : 0.8);
+        const d = p.moveToward(target.pos.x + Math.sin(i * 2.1) * off, target.pos.z + Math.cos(i * 2.1) * off, p.maxSpeed * 0.8, dt, 8);
+        if (d < 1.6) { p.vel.multiplyScalar(0.5); face(p, target); if (p.lock <= 0) p.playAnim(i % 2 === 0 ? 'restrain' : 'protest', 1.0); }
+      });
+      // Separan al agresor
+      if (S.t > 1) { const away = agg.pos.clone().sub(def.pos).setY(0).normalize(); agg.moveToward(agg.pos.x + away.x * 2, agg.pos.z + away.z * 2, 1.2, dt, 4); face(agg, def); if (agg.lock <= 0) agg.playAnim('confront', 0.8); }
+      const ref = this.ref, rd = Math.hypot(ref.pos.x - c.x, ref.pos.z - c.z);
+      if (rd < 3.2 && !S.carded && S.t > 1.2) {
+        S.carded = true; this.whistle(2);
+        const red = Math.random() < 0.18;
+        this.card(agg, red);
+        if (!def.sentOff && Math.random() < 0.45) setTimeout(() => this.card(def, false), 1500);
+      }
+      if (S.t > 6.5 || (S.carded && S.t > 4.5)) { this.scuffle = null; if (this.restart) this.restart.wait = Math.max(this.restart.wait, this.restart.t + 2); }
+      return true;
+    }
+    return false;
   }
   card(p, red) {
     this.stats.cards[p.team]++;
@@ -770,6 +832,9 @@ export class Match {
   updateRestart(dt) {
     const r = this.restart, b = this.ball;
     r.t += dt;
+    const sc = this.scuffle && this.updateScuffle(dt);
+    if (sc) r.t = Math.min(r.t, 0.5);
+    const busy = sc ? new Set([this.scuffle?.def, this.scuffle?.agg, ...(this.scuffle?.helpersA || []), ...(this.scuffle?.helpersB || [])]) : null;
     const tk = r.taker && !r.taker.sentOff ? r.taker : (r.taker = this.nearest(r.team, r.spot, null, r.type === 'goalkick'));
     const d = this.dir(r.team);
     // Posición del ejecutor detrás del balón
@@ -779,7 +844,7 @@ export class Match {
     const sp = r.spot.clone().addScaledVector(behind, r.type === 'throw' ? 0.1 : 0.7);
     for (const p of this.all) {
       if (p.sentOff) { if (p.mode === 'leaving') { const dd = p.moveToward(0, HW + 9, 2.2, dt); if (dd < 1.5) { p.mode = 'gone'; p.root.visible = false; p.pos.set(0, -50, 60); } } continue; }
-      if (p.mode === 'fallen') continue;
+      if (p.mode === 'fallen' || busy?.has(p)) continue;
       if (p === tk) { p.moveToward(sp.x, sp.z, 5, dt, 8); p.faceToward(r.type === 'throw' ? p.pos.x + d * 6 : r.type === 'corner' ? this.goalX(r.team) - d * 8 : this.goalX(r.team), 0, dt); continue; }
       let t;
       if (r.type === 'kickoff') t = this.formationTarget(p, true);
@@ -842,7 +907,9 @@ export class Match {
     }
   }
   updateFulltime(dt) {
-    for (const p of this.all) { if (p.sentOff) continue; p.vel.multiplyScalar(0.92); if (p.lock <= 0 && p.anim === 'celebrate') p.playAnim('celebrate', 3); }
+    for (const p of this.all) { if (p.sentOff || p === this.interview?.mvp) continue; p.vel.multiplyScalar(0.92); if (p.lock <= 0 && p.anim === 'celebrate') p.playAnim('celebrate', 3); }
+    if (this.phaseT > 4 && !this.interview) this.interview = new Interview(this);
+    this.interview?.update(dt);
     if (this.phaseT > 12 && !this.ended) { this.ended = true; this.game.events.emit('match:end', { score: this.score.slice() }); }
   }
   updateOfficials(dt) {
@@ -850,9 +917,10 @@ export class Match {
     if (['tunnel', 'lineup', 'teamphoto', 'toss'].includes(this.phase)) return;
     const b = this.ball.pos;
     const r = this.ref;
-    const tx = clamp(b.x - Math.sign(b.x || 1) * 10, -HL + 10, HL - 10), tz = clamp(b.z - 12, -HW + 4, HW - 4);
+    const sc = this.scuffle && this.scuffle.stage >= 1 ? this.scuffle.center : null;
+    const tx = sc ? sc.x + 1.6 : clamp(b.x - Math.sign(b.x || 1) * 10, -HL + 10, HL - 10), tz = sc ? sc.z - 1.2 : clamp(b.z - 12, -HW + 4, HW - 4);
     const dx = tx - r.pos.x, dz = tz - r.pos.z, d = Math.hypot(dx, dz);
-    const sp = this.phase === 'warmup' ? 0 : Math.min(6, d * 0.8);
+    const sp = this.phase === 'warmup' ? 0 : Math.min(sc ? 7 : 6, d * (sc ? 1.5 : 0.8));
     if (d > 0.3) { r.vel.set(dx / d * sp, 0, dz / d * sp); } else r.vel.set(0, 0, 0);
     r.pos.addScaledVector(r.vel, dt); r.yaw = dampAngle(r.yaw, Math.atan2(b.x - r.pos.x, b.z - r.pos.z), 5, dt);
     if (this.phase === 'warmup') { r.pos.set(0, 0, -HW - 2); }

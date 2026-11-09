@@ -352,6 +352,33 @@ export class Humanoid {
         p.hipY = j * 0.15; p.shL = [-2.7, 0, -0.4]; p.shR = [-2.7, 0, 0.4]; p.elL = p.elR = -0.2 - j * 0.3; p.knL = p.knR = 0.2 * (1 - j);
         break;
       }
+      case 'shove': { // Empujón con las dos manos
+        loco(); const k = Math.sin(clamp(t, 0, 1) * Math.PI);
+        p.shL = [-0.3 - 1.25 * k, 0.25, -0.12]; p.shR = [-0.3 - 1.25 * k, -0.25, 0.12]; p.elL = p.elR = -1.0 * (1 - k) - 0.1;
+        p.spineRX = 0.28 * k; p.headRX = 0.1; p.thL = [-0.35 * k, -0.05]; p.knL = 0.3 * k;
+        break;
+      }
+      case 'confront': { // Encararse: pecho al frente, brazos abiertos hacia atrás
+        loco(); const w = Math.sin(this.breath * 2.6);
+        p.spineRX = -0.14; p.headRX = -0.12 + w * 0.05; p.shL = [0.35, 0, -0.6]; p.shR = [0.35, 0, 0.6]; p.elL = p.elR = -0.25; p.hipY = Math.abs(w) * 0.02;
+        break;
+      }
+      case 'restrain': { // Sujetar o separar a un compañero
+        loco(); const w = Math.sin(this.breath * 4) * 0.12;
+        p.shL = [-1.25 + w, 0.5, -0.2]; p.shR = [-1.25 - w, -0.5, 0.2]; p.elL = p.elR = -1.1; p.spineRX = 0.25;
+        break;
+      }
+      case 'mic': { // Periodista con micrófono extendido
+        loco(); const w = Math.sin(this.breath * 1.3) * 0.04;
+        p.shR = [-1.15 + w, -0.25, 0.15]; p.elR = -1.25; p.shL = [-0.7, 0.2, -0.1]; p.elL = -1.3; p.headRX = 0.05;
+        p.shL = [-1.15 + w, 0.25, -0.15]; p.elL = -1.25;
+        break;
+      }
+      case 'protest': { // Reclamar al árbitro
+        loco(); const w = Math.sin(this.breath * 3);
+        p.shL = [-1.0 + w * 0.25, 0, -0.6]; p.shR = [-1.0 - w * 0.25, 0, 0.6]; p.elL = p.elR = -1.3; p.headRX = -0.15;
+        break;
+      }
       case 'talk': {
         loco();
         const w = Math.sin(this.breath * 2.3);
