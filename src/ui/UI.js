@@ -233,7 +233,7 @@ export class UI {
   padNav(dt) {
     const inp = this.game.input; if (!inp.pad) return;
     this.navCD = Math.max(0, (this.navCD || 0) - dt);
-    const confirmLayer = this.root.querySelector('.confirm-layer');
+    const confirmLayer = this.root.querySelector('.confirm-layer, .changelog-layer');
     const dlg = this.dlgEl.firstChild;
     const root = confirmLayer || (dlg && dlg.querySelector('.opts') ? dlg : null) || this.screen || this.customNavRoot;
     // Diálogo sin opciones: ✕ / ○ avanzan

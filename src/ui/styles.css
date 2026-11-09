@@ -401,3 +401,22 @@ select, input[type=text] { background: #0e1830; color: var(--text); border: 1px 
 .league-tabs .tab.on { background: var(--accent); color: #0a0d14; border-color: var(--accent); font-weight: 700; }
 .league-tabs .tab .cnt { font-size: 11px; background: rgba(0,0,0,.35); color: #fff; border-radius: 9px; padding: 0 6px; }
 .event-card.official { background: linear-gradient(135deg, rgba(31,157,85,.3), rgba(10,20,40,.6)); border-color: #3ddc84; }
+
+/* Novedades y arreglos (al abrir el juego) */
+.changelog-layer { align-items: center; justify-content: center; padding: 20px; background: rgba(3,6,12,.72); }
+.changelog { width: min(980px, 100%); max-height: calc(100vh - 40px); display: flex; flex-direction: column; padding: 0; overflow: hidden; border: 1px solid rgba(242,197,0,.35); }
+.changelog .cl-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 22px 26px 14px; background: linear-gradient(120deg, rgba(242,197,0,.16), rgba(47,124,246,.12)); border-bottom: 1px solid var(--line); }
+.changelog .cl-kicker { font-size: 12px; letter-spacing: 3px; color: var(--accent); font-weight: 800; }
+.changelog .cl-title { font-family: var(--cond); font-weight: 900; font-size: clamp(26px, 3.4vw, 40px); margin-top: 4px; }
+.changelog .cl-x { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255,255,255,.06); color: var(--text); cursor: pointer; font-size: 16px; }
+.changelog .cl-body { display: grid; grid-template-columns: 1.25fr 1fr; gap: 22px; padding: 18px 26px; overflow: auto; }
+.changelog .cl-sec { font-weight: 800; letter-spacing: 1px; margin-bottom: 10px; }
+.changelog .cl-news { display: flex; flex-direction: column; gap: 10px; }
+.changelog .cl-item { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; line-height: 1.4; }
+.changelog .cl-item .ic { width: 34px; height: 34px; flex: none; border-radius: 9px; background: rgba(255,255,255,.07); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+.changelog .cl-fixes { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: #d6deea; }
+.changelog .cl-fixes li { margin-bottom: 6px; }
+.changelog .cl-fixes li::marker { content: "✔  "; color: var(--good); }
+.changelog .cl-foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 26px 18px; border-top: 1px solid var(--line); background: rgba(0,0,0,.2); }
+.changelog .cl-author .name { font-family: var(--cond); font-weight: 900; font-size: 22px; letter-spacing: 2px; color: #fff; }
+@media (max-width: 760px) { .changelog .cl-body { grid-template-columns: 1fr; } .changelog .cl-foot { flex-direction: column; align-items: stretch; } }

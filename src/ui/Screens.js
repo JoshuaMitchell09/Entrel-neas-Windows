@@ -13,6 +13,7 @@ import { LABELS } from '../photography/PhotoEvaluator.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { TEAMS } from '../football/Teams.js';
 import { openCustomizer } from './Customizer.js';
+import { showChangelog, changelogSeen, VERSION, AUTHOR, COPYRIGHT } from './Changelog.js';
 
 const ICONS = { camera: '📷', lens: '🔭', card: '💾', battery: '🔋', accessory: '🧰', backpack: '🎒', credential: '🪪' };
 
@@ -29,10 +30,13 @@ export class Screens {
       { label: 'Arcade', desc: 'Un partido rápido: elegí estadio, equipos, hora y clima.', go: () => this.arcadeSetup() },
       has && { label: 'Cargar partida', desc: 'Abrí otra de tus partidas guardadas.', go: () => this.loadMenu() },
       { label: 'Ajustes', desc: 'Gráficos, sonido, controles y accesibilidad.', go: () => this.settingsStandalone() },
-      { label: 'Créditos', desc: 'Quiénes hicieron este juego.', go: () => this.credits() },
+      { label: 'Novedades', desc: `Lo nuevo y los errores arreglados en la versión ${VERSION}.`, go: () => showChangelog(this.ui) },
+      { label: 'Créditos', desc: `Quiénes hicieron este juego. Un juego de ${AUTHOR}.`, go: () => this.credits() },
     ].filter(Boolean);
     const news = [
       { k: 'BIENVENIDA', t: '¡Bienvenido a Entre Líneas!', s: 'El partido lo juegan ellos. La historia la capturás vos.' },
+      { k: 'NUEVO', t: 'Segunda División y ligas menores', s: 'El Estadio El Llano, los complejos de entrenamiento y las futuras estrellas U-17 y U-15.' },
+      { k: 'EQUIPO', t: 'Llevá dos cámaras', s: 'Un teleobjetivo y un angular listos a la vez. Y vendé lo que ya no usás.' },
       { k: 'NUEVO', t: 'Copa Centroamericana', s: 'Acreditación especial, rivales de toda la región y noches de copa en la Cueva.' },
       { k: 'CARRERA', t: 'Fotógrafo oficial del club', s: 'Si el titular se enferma, el editor te llama: vestuarios, palco y todo el estadio.' },
       { k: 'MODO CINE', t: 'Grabá con el dron o el celular', s: 'Videos horizontales o verticales para presentar tus mejores tomas.' },
@@ -59,11 +63,11 @@ export class Screens {
       h('div', { class: 'mm-list' }, ...btns, desc),
       h('div', { class: 'mm-news' }, head, dots),
       h('div', { class: 'mm-hint' }, h('span', { class: 'key' }, 'Esc'), ' Ajustes', h('span', { class: 'key', style: { marginLeft: '18px' } }, '↑↓'), ' Navegar', h('span', { class: 'key', style: { marginLeft: '18px' } }, 'Enter'), ' Elegir'),
-      h('div', { class: 'mm-foot' }, h('span', { class: 'dot' }), `${g.playerName && g.playerName !== 'Fotógrafo' ? g.playerName + ' · ' : ''}v0.1 · Clubes, estadios y marcas ficticias`));
+      h('div', { class: 'mm-foot' }, h('span', { class: 'dot' }), `${g.playerName && g.playerName !== 'Fotógrafo' ? g.playerName + ' · ' : ''}v${VERSION} · ${COPYRIGHT}`));
     pick(0); show(0);
     const timer = setInterval(() => { if (document.body.contains(el)) show(slide + 1); }, 6500);
     const onKey = (e) => {
-      if (this.ui.screen !== el || this.ui.root.querySelector('.confirm-layer')) return;
+      if (this.ui.screen !== el || this.ui.root.querySelector('.confirm-layer, .changelog-layer')) return;
       if (e.code === 'ArrowDown' || e.code === 'KeyS') { e.preventDefault(); pick((sel + 1) % items.length); btns[sel].focus(); }
       else if (e.code === 'ArrowUp' || e.code === 'KeyW') { e.preventDefault(); pick((sel - 1 + items.length) % items.length); btns[sel].focus(); }
       else if (e.code === 'ArrowRight') show(slide + 1); else if (e.code === 'ArrowLeft') show(slide - 1);
@@ -73,6 +77,7 @@ export class Screens {
     document.addEventListener('keydown', onKey);
     this.ui.openScreen('menu', el);
     this.ui.screenCleanup = () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
+    if (!changelogSeen() && !this.changelogShown) { this.changelogShown = true; setTimeout(() => showChangelog(this.ui), 400); }
   }
   async newGameDialog() {
     const g = this.game;
@@ -101,6 +106,7 @@ export class Screens {
   credits() {
     const el = h('div', { class: 'screen' }, h('div', { class: 'panel results', style: { maxWidth: '640px' } }, h('div', { class: 'h2' }, 'Créditos'),
       h('p', {}, 'ENTRE LÍNEAS: Fotógrafo de la Liga Tica — simulador de fotografía deportiva.'),
+      h('p', {}, h('b', {}, `Autor: ${AUTHOR}`), h('br'), h('span', { class: 'muted' }, `${COPYRIGHT} Versión ${VERSION}.`)),
       h('p', { class: 'muted' }, 'Todo el contenido (estadios, clubes, jugadores, marcas, texturas y sonidos) es ficticio y se genera proceduralmente en tiempo real. Motor: Three.js (WebGL) + WebAudio.'),
       h('button', { class: 'btn', onclick: () => this.mainMenu() }, 'Volver')));
     this.ui.openScreen('credits', el);
