@@ -39,6 +39,8 @@ import { Recorder } from '../cinema/Recorder.js';
 import { PhoneCam } from '../cinema/PhoneCam.js';
 import { clamp } from '../core/MathUtil.js';
 import { buildMenuCamera } from '../world/MenuCameraProp.js';
+import { showChapter } from '../ui/Chapter.js';
+import { MAIL_CONTACTS } from '../career/Tiers.js';
 
 export class Game {
   constructor(canvas) {
@@ -172,8 +174,33 @@ export class Game {
     this.playerName = name; this.profileId = 'p_' + Date.now(); this.cardPhoto = photo;
     await this.photos.setProfile(this.profileId);
     this.career.reset(); this.inventory.reset(); this.missions.active = []; this.missions.done = []; this.story.introDone = false; this.phone.reset();
+    this.career.tier = 0; this.career.pendingChapter = null; this.career.chaptersSeen = [1];
     this.saves.save('auto');
-    await this.startEvent(EVENTS[0]);
+    this.ui.closeScreen(true);
+    await showChapter(this.ui, 1);
+    await this.startEvent(this.firstEventOfTier());
+  }
+  firstEventOfTier() { const av = this.career.available(); return av.find((e) => !e.done && !e.locked && e.tierIdx === this.career.tier) || av.find((e) => !e.locked && !e.done) || EVENTS.find((e) => e.id === 'am1'); }
+  // Avance del modo historia al volver a la redacción: contactos nuevos, respuestas de correo y capítulos
+  async storyCheck() {
+    const c = this.career; if (this.arcade) return;
+    c.checkProgress(); this.mailCheck();
+    if (this.state !== 'hub' || this.chapterShowing) return;
+    if (c.pendingChapter && !c.chaptersSeen.includes(c.pendingChapter)) {
+      const n = c.pendingChapter; c.chaptersSeen.push(n); c.pendingChapter = null; this.chapterShowing = true;
+      await showChapter(this.ui, n); this.chapterShowing = false; this.saves.save('auto'); this.screens.hubRender?.();
+    }
+    if (c.completed.includes('sel4') && !c.flags.epilogue) { c.flags.epilogue = true; this.chapterShowing = true; await showChapter(this.ui, 'epilogo'); this.chapterShowing = false; this.saves.save('auto'); }
+  }
+  mailCheck() {
+    const res = this.career.mailTick();
+    for (const r of res) {
+      const C = MAIL_CONTACTS[r.id];
+      this.phone?.notify({ name: `📧 ${C.name}`, emoji: '📧', color: r.ok ? '#1f9d55' : '#6b7280' }, r.ok ? `Respondió tu correo: ¡te aceptaron! (${C.org})` : `Respondió tu correo (${C.org}). Abrí el Correo para leerlo.`);
+      this.ui.toast(r.ok ? `📧 ¡${C.name} aceptó tu correo! Se abrió una etapa nueva de tu carrera.` : `📧 ${C.name} respondió tu correo. Revisalo en el Correo.`, r.ok ? 'good' : 'info', 5000);
+      this.saves.save('auto'); this.screens.hubRender?.();
+    }
+    if (res.some((r) => r.ok) && this.state === 'hub') this.storyCheck();
   }
   async applySave(d) {
     this.arcade = false;
@@ -187,7 +214,7 @@ export class Game {
     const d = this.saves.read(slot); if (!d) return;
     await this.applySave(d);
     this.ui.toast('Partida cargada.', 'good');
-    if (this.story.introDone) this.openHub(); else await this.startEvent(EVENTS[0]);
+    if (this.story.introDone) this.openHub(); else await this.startEvent(this.firstEventOfTier());
   }
   // ---------------- Modo arcade ----------------
   async startArcade(cfg) {
@@ -250,6 +277,7 @@ export class Game {
     this.inEvent = false; this.state = 'hub'; if (this.photoMode.active) this.photoMode.exit();
     if (!this.stadium) this.buildLevel(this.career.nextEvent() || EVENTS[0]);
     this.screens.hub();
+    setTimeout(() => this.storyCheck(), 300);
   }
   // ---------------- Entrega al editor ----------------
   openDelivery() {
@@ -372,6 +400,7 @@ export class Game {
   }
   update(dt) {
     this.time += dt;
+    if ((this.state === 'hub' || this.state === 'play') && !this.arcade && this.career.mail?.sent.length) { this.mailT = (this.mailT || 0) - dt; if (this.mailT <= 0) { this.mailT = 2; this.mailCheck(); } }
     this.input.pollPad();
     if (this.input.pad && !this.padAnnounced) { this.padAnnounced = true; this.audio.start(); this.ui.toast(this.input.isPlayStation ? '🎮 Control de PlayStation conectado' : '🎮 Control conectado', 'good'); }
     if (!this.input.pad) this.padAnnounced = false;

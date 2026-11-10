@@ -475,3 +475,32 @@ select, input[type=text] { background: #0e1830; color: var(--text); border: 1px 
 .cred-photo { width: min(420px, 92vw); background: rgba(10,16,30,.7); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
 .cred-photo summary { cursor: pointer; font-weight: 700; font-size: 14px; }
 .cred-photo[open] summary { margin-bottom: 10px; }
+
+/* Modo historia: capítulos, tarjeta de historia y correo */
+.chapter-layer { align-items: center; justify-content: center; padding: 20px; background: radial-gradient(ellipse at center, rgba(12,20,38,.94), rgba(3,5,10,.98)); animation: fadein .5s; }
+.chapter-layer.out { opacity: 0; transition: opacity .35s; }
+.chapter { width: min(680px, 100%); text-align: center; animation: chUp .7s cubic-bezier(.2,.9,.3,1); }
+@keyframes chUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.chapter .ch-img { font-size: 54px; filter: drop-shadow(0 6px 18px rgba(0,0,0,.6)); }
+.chapter .ch-kicker { color: var(--accent); letter-spacing: 6px; font-weight: 800; font-size: 13px; margin-top: 8px; }
+.chapter .ch-title { font-family: var(--cond); font-weight: 900; font-size: clamp(30px, 5vw, 50px); margin: 6px 0 14px; }
+.chapter .ch-text p { color: #d6deea; font-size: 15.5px; line-height: 1.6; margin: 0 0 12px; text-align: left; }
+.chapter .ch-goal { background: rgba(242,197,0,.1); border: 1px solid rgba(242,197,0,.35); border-radius: 10px; padding: 10px 14px; font-size: 14px; text-align: left; margin: 14px 0 18px; }
+.story-card { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 10px; margin: 8px 0 4px; background: linear-gradient(120deg, rgba(242,197,0,.14), rgba(47,124,246,.1)); border: 1px solid rgba(242,197,0,.35); }
+.story-card .sc-ic { font-size: 30px; } .story-card .sc-k { font-size: 11px; letter-spacing: 2px; color: var(--accent); font-weight: 800; }
+.story-card .sc-t { font-family: var(--cond); font-weight: 900; font-size: 20px; } .story-card .sc-s { font-size: 13px; color: #d6deea; margin-top: 2px; }
+.event-card.amigos { background: linear-gradient(135deg, rgba(15,81,50,.35), rgba(20,30,40,.6)); border-color: #2f9e62; }
+.event-card.seleccion { background: linear-gradient(135deg, rgba(200,16,46,.28), rgba(27,63,166,.3)); border-color: #ffffff; }
+.mail-panel { width: min(560px, 94vw); max-height: 88vh; display: flex; flex-direction: column; padding: 16px; margin: auto; }
+.mail-head { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; margin-bottom: 8px; } .mail-head .btn { margin-left: auto; }
+.mail-wrap { overflow: auto; }
+.mail-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+.mail-tabs .tab { font-size: 12px; padding: 5px 10px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--text); cursor: pointer; }
+.mail-tabs .tab.on { background: var(--accent); color: #0a0d14; font-weight: 700; border-color: var(--accent); }
+.mail-step { font-size: 12.5px; background: rgba(255,255,255,.05); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; color: #dfe6f2; }
+.mail-row { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; color: var(--text); cursor: pointer; }
+.mail-row.unread { border-color: var(--accent); background: rgba(242,197,0,.08); } .mail-row .av { font-size: 20px; } .mail-row .mid { display: flex; flex-direction: column; min-width: 0; } .mail-row .prev { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail-compose { background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 13px; }
+.mail-subj { font-weight: 700; margin-top: 6px; } .mail-body { white-space: pre-wrap; line-height: 1.5; font-size: 13px; margin-top: 6px; color: #dfe6f2; }
+.mail-empty { font-size: 13px; padding: 10px 2px; } .mail-open { font-size: 13px; }
+.ph-mail .mail-tabs .tab { font-size: 11px; padding: 4px 8px; } .ph-mail .mail-compose, .ph-mail .mail-row { font-size: 12px; }

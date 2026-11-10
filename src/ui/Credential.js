@@ -14,11 +14,12 @@ export function drawCredential(c, game) {
   // Ranura del cordón
   round(ctx, W / 2 - 40, 16, 80, 12, 6); ctx.fillStyle = '#c9d0db'; ctx.fill();
   // Encabezado
-  const hd = ctx.createLinearGradient(0, 40, W, 140); hd.addColorStop(0, off ? off.colors.primary : '#0b3d91'); hd.addColorStop(1, off ? '#111111' : '#0a2a66');
+  const sele = cr.league === 'seleccion';
+  const hd = ctx.createLinearGradient(0, 40, W, 140); hd.addColorStop(0, off ? off.colors.primary : sele ? '#c8102e' : '#0b3d91'); hd.addColorStop(1, off ? '#111111' : sele ? '#1b3fa6' : '#0a2a66');
   ctx.fillStyle = hd; ctx.fillRect(0, 40, W, 108);
   ctx.fillStyle = '#f2c500'; ctx.fillRect(0, 148, W, 6);
-  ctx.fillStyle = '#fff'; ctx.font = '900 30px Arial Black, Arial'; ctx.fillText(off ? off.short + ' · STAFF' : 'LIGA TICA', 24, 84);
-  ctx.font = '600 14px Arial'; ctx.fillStyle = '#e8eefc'; ctx.fillText(off ? off.name.toUpperCase() : ({ segunda: 'SEGUNDA DIVISIÓN', menores: 'LIGAS MENORES · TORNEO JUVENIL' }[cr.league] || 'PRIMERA DIVISIÓN') + ' · TEMPORADA 2026', 24, 108, cr.home ? W - 186 : W - 48);
+  ctx.fillStyle = '#fff'; ctx.font = '900 30px Arial Black, Arial'; ctx.fillText(off ? off.short + ' · STAFF' : sele ? 'SELECCIÓN' : 'LIGA TICA', 24, 84);
+  ctx.font = '600 14px Arial'; ctx.fillStyle = '#e8eefc'; ctx.fillText(off ? off.name.toUpperCase() : ({ segunda: 'SEGUNDA DIVISIÓN', menores: 'LIGAS MENORES · TORNEO JUVENIL', seleccion: 'ELIMINATORIAS · ESTADIO NACIONAL' }[cr.league] || 'PRIMERA DIVISIÓN') + ' · TEMPORADA 2026', 24, 108, cr.home ? W - 186 : W - 48);
   ctx.font = '700 12px Arial'; ctx.fillStyle = '#f2c500'; ctx.fillText(off ? 'PERSONAL DEL CLUB · ACCESO TOTAL' : 'ACREDITACIÓN OFICIAL', 24, 132);
   if (cr.home) { ctx.drawImage(crestCanvas(game.team(cr.home), 64), W - 150, 58); ctx.drawImage(crestCanvas(game.team(cr.away), 64), W - 80, 58); }
   // Foto del fotógrafo (la que subió al crear la carrera) o silueta
@@ -37,7 +38,8 @@ export function drawCredential(c, game) {
   // Datos
   ctx.fillStyle = '#0a0f1c'; ctx.font = '800 22px Arial'; wrap(ctx, (game.playerName || 'Fotógrafo').toUpperCase(), 172, 200, 230, 24);
   ctx.font = '600 13px Arial'; ctx.fillStyle = '#56627a';
-  const rows = [['MEDIO', off ? off.name : 'Ascenso Total'], ['FUNCIÓN', off ? 'Fotógrafo oficial del club' : 'Reportero gráfico'], ['EVENTO', cr.event || '—'], ['FECHA', cr.date || '—'], ['ESTADIO', cr.stadium || '—']];
+  const medio = off ? off.name : ({ menores: 'Prensa · Ligas menores', segunda: 'Atlético El Llano', seleccion: 'Ascenso Total' }[cr.league] || 'Ascenso Total');
+  const rows = [['MEDIO', medio], ['FUNCIÓN', off ? 'Fotógrafo oficial del club' : cr.league === 'seleccion' ? 'Fotógrafo · Selección Nacional' : 'Reportero gráfico'], ['EVENTO', cr.event || '—'], ['FECHA', cr.date || '—'], ['ESTADIO', cr.stadium || '—']];
   let y = 248; for (const [k, v] of rows) { ctx.fillStyle = '#8a95a8'; ctx.font = '700 10px Arial'; ctx.fillText(k, 172, y); ctx.fillStyle = '#0a0f1c'; ctx.font = '600 13px Arial'; wrap(ctx, v, 172, y + 15, 230, 15); y += 36; }
   // Banda de zona
   ctx.fillStyle = off ? '#1f9d55' : '#e63946'; ctx.fillRect(0, 432, W, 70);

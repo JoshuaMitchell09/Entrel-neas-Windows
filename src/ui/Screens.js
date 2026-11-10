@@ -14,6 +14,8 @@ import { AudioEngine } from '../audio/AudioEngine.js';
 import { TEAMS } from '../football/Teams.js';
 import { openCustomizer } from './Customizer.js';
 import { cardPhotoPicker, cardImage } from './CardPhoto.js';
+import { openMailScreen, nextStep } from './MailUI.js';
+import { TIERS, CHAPTERS } from '../career/Tiers.js';
 import { showChangelog, changelogSeen, VERSION, AUTHOR, COPYRIGHT } from './Changelog.js';
 
 const ICONS = { camera: '📷', lens: '🔭', card: '💾', battery: '🔋', accessory: '🧰', backpack: '🎒', credential: '🪪' };
@@ -377,7 +379,7 @@ export class Screens {
     const render = () => {
       clear(left); clear(right);
       const evs = c.available(), next = c.nextEvent();
-      left.append(h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '14px', marginBottom: '6px' } }, h('div', { class: 'h1' }, 'REDACCIÓN'), h('div', { class: 'muted' }, `Ascenso Total · Día ${c.day}`)));
+      left.append(h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '14px', marginBottom: '6px' } }, h('div', { class: 'h1' }, c.tier >= 3 ? 'REDACCIÓN' : 'MI ESCRITORIO'), h('div', { class: 'muted' }, c.tier >= 3 ? `Ascenso Total · Día ${c.day}` : `Fotógrafo independiente · ${TIERS[c.tier].name} · Día ${c.day}`)));
       const oo = c.officialOffer && evs.find((x) => x.id === c.officialOffer.eventId && !x.locked);
       if (oo) left.append(h('div', { class: 'event-card official' }, h('div', {},
         h('div', { class: 'muted', style: { fontSize: '12px', letterSpacing: '1px' } }, '⭐ OFERTA ESPECIAL · FOTÓGRAFO OFICIAL'),
@@ -388,16 +390,22 @@ export class Screens {
           h('button', { class: 'btn small', onclick: () => { c.officialOffer = null; render(); } }, 'Rechazar'))));
       left.append(h('div', { class: 'h3', style: { marginTop: '12px' } }, 'Calendario de coberturas'));
       const lg = (e) => (e.cup ? 'cup' : e.league || 'primera'), F = this.leagueFilter || 'all';
-      left.append(h('div', { class: 'league-tabs' }, ...[['all', 'Todas'], ['primera', 'Primera'], ['segunda', 'Segunda'], ['menores', 'Ligas menores'], ['cup', 'Copa']].map(([k, l]) =>
+      // Tu historia: capítulo actual y siguiente paso
+      const ch = CHAPTERS[Math.min(CHAPTERS.length - 1, c.tier)];
+      left.append(h('div', { class: 'story-card' }, h('div', { class: 'sc-ic' }, ch.img),
+        h('div', { style: { flex: 1 } }, h('div', { class: 'sc-k' }, `${ch.kicker} · ${TIERS[c.tier].name.toUpperCase()}`), h('div', { class: 'sc-t' }, ch.title), h('div', { class: 'sc-s' }, nextStep(g))),
+        c.flags.mailApp || c.mail.inbox.length ? h('button', { class: 'btn small' + (c.unreadMail || c.mail.contacts.some((id) => c.canWrite(id)) ? ' primary' : ''), onclick: () => openMailScreen(g, () => this.hub()) }, `📧 Correo${c.unreadMail ? ` (${c.unreadMail})` : ''}`) : null));
+      left.append(h('div', { class: 'league-tabs' }, ...[['all', 'Todas'], ['amigos', 'Amigos'], ['menores', 'Ligas menores'], ['segunda', 'Segunda'], ['primera', 'Primera'], ['cup', 'Copa'], ['seleccion', 'Selección']].filter(([k]) => k === 'all' || evs.some((e) => lg(e) === k && e.tierIdx <= c.tier + 1)).map(([k, l]) =>
         h('button', { class: 'tab' + (F === k ? ' on' : ''), onclick: () => { this.leagueFilter = k; render(); } }, l, k !== 'all' ? h('span', { class: 'cnt' }, String(evs.filter((e) => lg(e) === k && !e.locked && !e.done).length)) : null))));
       for (const e of evs) {
+        if (e.tierIdx > c.tier + 1) continue; // la historia se va revelando por etapas
         if (F !== 'all' && lg(e) !== F) continue;
         const st = STADIUMS[e.stadium];
         left.append(h('div', { class: 'event-card' + (e.locked ? ' locked' : '') + (e.cup ? ' cup' : '') + (e.league ? ' ' + e.league : '') + (next && next.id === e.id ? ' next' : '') },
           h('div', {}, h('div', { class: 'muted', style: { fontSize: '12px', letterSpacing: '1px' } }, `${e.title.toUpperCase()} · ${st.name} · ${formatClock(e.kickoff)} · ${TIME_PRESETS[e.time].label} · ${WEATHER_PRESETS[e.weather].label}`),
             h('div', { class: 'teams', style: { margin: '6px 0' } }, this.ui.crest(g.team(e.home), 30), g.teamName(e.home), h('span', { class: 'muted' }, 'vs'), this.ui.crest(g.team(e.away), 30), g.teamName(e.away)),
             h('div', { style: { fontSize: '13px' } }, h('b', {}, 'Encargo: '), `${e.assignment.title} — ${e.assignment.desc}`),
-            h('div', { style: { fontSize: '12px', marginTop: '4px' } }, h('span', { class: 'pill' }, `Pago ×${(e.mult * c.payMult).toFixed(2)}`), e.done ? h('span', { class: 'pill on' }, 'Cubierto') : null, e.locked ? h('span', { class: 'pill r' }, e.clasico && c.reputation >= e.minRep ? 'Requiere contrato de planta o reputación 55' : `Requiere reputación ${e.minRep}`) : null)),
+            h('div', { style: { fontSize: '12px', marginTop: '4px' } }, h('span', { class: 'pill' }, `Pago ×${(e.mult * c.payMult).toFixed(2)}`), e.done ? h('span', { class: 'pill on' }, 'Cubierto') : null, e.locked ? h('span', { class: 'pill r' }, e.tierLocked ? `Próxima etapa: ${TIERS[e.tierIdx].name}` : e.clasico && c.reputation >= e.minRep ? 'Requiere contrato de planta o reputación 55' : `Requiere reputación ${e.minRep}`) : null)),
           h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'stretch' } },
             (() => { const sel = h('select', { title: 'Horario', onchange: (ev) => { this.timeChoice[e.id] = ev.target.value; } },
               h('option', { value: '' }, `Horario: ${TIME_PRESETS[e.time].label}`), ...Object.entries(TIME_PRESETS).filter(([k]) => k !== e.time).map(([k, v]) => h('option', { value: k, selected: this.timeChoice[e.id] === k ? true : null }, v.label)));
@@ -409,7 +417,7 @@ export class Screens {
       // Panel derecho: perfil, contratos, tienda
       right.append(h('div', { class: 'card' }, h('div', { class: 'h3' }, g.playerName), h('div', {}, c.title), h('div', { class: 'repbar', style: { margin: '8px 0' } }, h('i', { style: { width: c.reputation + '%' } })),
         h('div', { class: 'stat' }, h('span', {}, 'Reputación'), h('b', {}, Math.round(c.reputation))), h('div', { class: 'stat' }, h('span', {}, 'Dinero'), h('b', {}, formatMoney(c.money))),
-        h('div', { class: 'stat' }, h('span', {}, 'Contrato'), h('b', {}, CONTRACTS.find((x) => x.id === c.contract).name)),
+        h('div', { class: 'stat' }, h('span', {}, c.tier >= 3 ? 'Contrato' : 'Situación'), h('b', {}, c.tier >= 3 ? CONTRACTS.find((x) => x.id === c.contract).name : 'Independiente (sin contrato)')),
         h('div', { style: { display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' } }, h('button', { class: 'btn small', onclick: () => this.pause('inventario') }, 'Mochila / equipo'), h('button', { class: 'btn small', onclick: () => this.pause('galeria') }, 'Archivo de fotos'), h('button', { class: 'btn small', onclick: () => this.pause('perfil') }, 'Perfil'), h('button', { class: 'btn small', onclick: () => this.pause('guardar') }, 'Guardar'))));
       for (const o of c.offers()) right.append(h('div', { class: 'card', style: { marginTop: '10px', borderColor: 'var(--accent)' } }, h('div', { class: 'h3' }, 'Nueva oferta de contrato'), h('b', {}, o.name), h('div', { class: 'muted', style: { margin: '4px 0 8px' } }, o.desc),
         h('button', { class: 'btn primary small', onclick: () => { c.contract = o.id; g.audio?.ui('mission'); g.ui.toast(`Firmaste: ${o.name}`, 'mission'); g.saves.save('auto'); render(); } }, 'Firmar contrato')));
@@ -455,7 +463,7 @@ export class Screens {
     const best = photos.slice().sort((a, b) => g.photos.finalScore(b) - g.photos.finalScore(a))[0];
     const el = h('div', { class: 'screen' }, h('div', { class: 'panel results' },
       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px' } },
-        h('div', {}, h('div', { class: 'muted', style: { letterSpacing: '2px', fontSize: '12px' } }, 'EVALUACIÓN DEL EDITOR · RICARDO SOLANO'), h('div', { class: 'h1' }, 'RESULTADOS'), h('div', { class: 'muted' }, g.career.currentEventName())),
+        h('div', {}, h('div', { class: 'muted', style: { letterSpacing: '2px', fontSize: '12px' } }, (g.career.event ? TIERS[g.career.available().find((x) => x.id === g.career.event.id)?.tierIdx ?? 3] : TIERS[3]).evaluator.title), h('div', { class: 'h1' }, 'RESULTADOS'), h('div', { class: 'muted' }, g.career.currentEventName())),
         h('div', { style: { textAlign: 'right' } }, h('div', { class: 'bigscore', style: { color: res.rep >= 0 ? 'var(--good)' : 'var(--bad)' } }, `${res.rep >= 0 ? '+' : ''}${res.rep}`), h('div', { class: 'muted' }, `Reputación ${res.prevRep} → ${res.newRep}`), h('div', { style: { fontSize: '22px', fontWeight: 700, marginTop: '6px' } }, `+ ${formatMoney(res.money)}`))),
       best ? h('div', { class: 'card', style: { margin: '16px 0', display: 'grid', gridTemplateColumns: '300px 1fr', gap: '16px', borderColor: 'var(--accent)' } }, h('img', { src: best.thumb, style: { width: '100%', borderRadius: '8px' } }),
         h('div', {}, h('div', { class: 'h3' }, 'La foto de la jornada'), h('div', { style: { fontSize: '18px', fontWeight: 700 } }, `“${(best.editedEval || best.eval).label}: ${g.photos.finalScore(best)}/100”`), h('div', { style: { marginTop: '6px', lineHeight: 1.5 } }, best.eval.comments.join(' ')))) : null,

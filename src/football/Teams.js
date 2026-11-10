@@ -69,6 +69,22 @@ export const TEAMS = {
   soda: { id: 'soda', name: 'La Soda F.C.', short: 'SOD', city: 'Desamparados', league: 'amigos',
     colors: { primary: '#f97316', secondary: '#ffffff', shorts: '#1f2937', socks: '#f97316', ink: '#ffffff' },
     gk: { shirt: '#0ea5e9', shorts: '#111111' }, style: { pace: 0.84, pass: 0.8, shoot: 0.8 } },
+  // Selecciones nacionales (Estadio Nacional). Planteles con nombres ficticios.
+  cr: { id: 'cr', name: 'Costa Rica', short: 'CRC', city: 'San José', league: 'seleccion', country: 'CRC',
+    colors: { primary: '#c8102e', secondary: '#ffffff', shorts: '#1b3fa6', socks: '#ffffff', ink: '#ffffff' },
+    gk: { shirt: '#111111', shorts: '#111111' }, style: { pace: 1.08, pass: 1.08, shoot: 1.06 } },
+  hon: { id: 'hon', name: 'Honduras', short: 'HON', city: 'Tegucigalpa', league: 'seleccion', country: 'HON',
+    colors: { primary: '#ffffff', secondary: '#1f4fa3', shorts: '#ffffff', socks: '#ffffff', ink: '#1f4fa3' },
+    gk: { shirt: '#f2c500', shorts: '#111111' }, style: { pace: 1.06, pass: 1.02, shoot: 1.04 } },
+  pan: { id: 'pan', name: 'Panamá', short: 'PAN', city: 'Ciudad de Panamá', league: 'seleccion', country: 'PAN',
+    colors: { primary: '#d4001e', secondary: '#ffffff', shorts: '#d4001e', socks: '#d4001e', ink: '#ffffff' },
+    gk: { shirt: '#00b3a4', shorts: '#111111' }, style: { pace: 1.06, pass: 1.04, shoot: 1.04 } },
+  gua: { id: 'gua', name: 'Guatemala', short: 'GUA', city: 'Ciudad de Guatemala', league: 'seleccion', country: 'GUA',
+    colors: { primary: '#ffffff', secondary: '#4a9fd8', shorts: '#4a9fd8', socks: '#ffffff', ink: '#4a9fd8' },
+    gk: { shirt: '#111111', shorts: '#111111' }, style: { pace: 1.02, pass: 1.0, shoot: 1.0 } },
+  jam: { id: 'jam', name: 'Jamaica', short: 'JAM', city: 'Kingston', league: 'seleccion', country: 'JAM',
+    colors: { primary: '#ffd100', secondary: '#009b3a', shorts: '#111111', socks: '#ffd100', ink: '#009b3a' },
+    gk: { shirt: '#7a2fbf', shorts: '#111111' }, style: { pace: 1.12, pass: 0.98, shoot: 1.04 } },
 };
 // Ligas menores: las categorías inferiores de los clubes de Primera (U-17 y U-15)
 for (const [base, cat] of [['tibas', 'U-17'], ['toros', 'U-17'], ['brumas', 'U-17'], ['tibas', 'U-15'], ['toros', 'U-15'], ['cafetal', 'U-15']]) {

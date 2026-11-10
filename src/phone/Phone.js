@@ -2,6 +2,7 @@ import { h, clear } from '../ui/dom.js';
 import { formatClock, pick, rand } from '../core/MathUtil.js';
 import { topicsFor } from './Conversations.js';
 import { genderize } from '../player/Look.js';
+import { renderMail } from '../ui/MailUI.js';
 
 /*
  * Teléfono del fotógrafo: mensajería con familia y amigos, la red social «Lente»
@@ -28,7 +29,7 @@ export class Phone {
     game.events.on('match:goal', (d) => this.onGoal(d));
     game.events.on('match:end', () => this.onMatchEnd());
     game.events.on('story:credential', () => this.after(4, () => this.receive('mariana', 'Te registré en la lista de prensa. Cualquier problema en seguridad, me llamás 📞')));
-    game.events.on('story:prepared', () => { if (Math.random() < 0.6) this.after(6, () => this.receive('kendall', '¿Ya alistó el equipo? Lo espero detrás de la portería este. Traiga el tele 📷')); });
+    game.events.on('story:prepared', () => { if (game.story?.amateur) { this.after(6, () => this.receive('diego', '¿Ya llegaste? Estoy a la orilla de la cancha 🙌')); return; } if (Math.random() < 0.6) this.after(6, () => this.receive('kendall', '¿Ya alistó el equipo? Lo espero detrás de la portería este. Traiga el tele 📷')); });
     game.events.on('photo:taken', (rec) => this.onPhoto(rec));
   }
   reset() {
@@ -36,8 +37,9 @@ export class Phone {
     this.social = { followers: 120, posts: [], feed: [] };
     this.tickets = []; this.guests = []; this.prediction = null; this.lastGoalMsg = -99; this.goodShots = 0; this.eventId = null;
     this.timers = []; this.view = 'home'; this.app = null; this.sel = null; this.fanThanks = 0;
-    this.receive('mama', '¡Mucha suerte en el trabajo nuevo! Estoy orgullosa de vos ❤️', { silent: true });
-    this.receive('vale', 'Te hice una cuenta en Lente para que subás tus fotos 📸 ¡Ya tenés seguidores!', { silent: true });
+    this.receive('mama', '¿Hoy vas a ir a tomarle fotos a Diego? Llevate un abrigo, que en la noche hace frío ❤️', { silent: true });
+    this.receive('vale', 'Te hice una cuenta en Lente para que subás tus fotos 📸 Si son buenas, alguien las va a ver.', { silent: true });
+    this.receive('diego', '¡Mae! El jueves jugamos en el fut 7 El Roble a las 7:30. Traete la cámara, el equipo quiere fotos 📸⚽', { silent: true });
   }
   serialize() {
     return { chats: this.chats, options: this.options, unread: this.unread, social: { followers: this.social.followers, posts: this.social.posts.slice(-30), feed: this.social.feed.slice(-25) }, tickets: this.tickets, guests: this.guests };
@@ -241,12 +243,15 @@ export class Phone {
     if (V === 'home') {
       body.append(h('div', { class: 'ph-wall' }, h('div', { class: 'ph-bigclock' }, formatClock(g.clock)), h('div', { class: 'muted' }, this.kickoffLine())));
       const unreadChats = Object.values(this.unread).reduce((a, b) => a + b, 0);
-      const apps = [['msgs', '💬', 'Mensajes', unreadChats], ['lente', '📷', 'Lente', this.social.newLikes ? '•' : 0], ['entradas', '🎟️', 'Entradas', this.tickets.filter((t) => t.status === 'disponible').length], ['camara', '📹', 'Cámara', 0], ['transporte', '🚕', 'Transporte', 0], ['reloj', '⏱️', 'Reloj', 0], ['galeria', '🖼️', 'Galería', 0], ['mapa', '🗺️', 'Mapa', 0]];
+      const apps = [['msgs', '💬', 'Mensajes', unreadChats], ['lente', '📷', 'Lente', this.social.newLikes ? '•' : 0], ['entradas', '🎟️', 'Entradas', this.tickets.filter((t) => t.status === 'disponible').length], ['correo', '📧', 'Correo', g.career?.unreadMail || 0], ['camara', '📹', 'Cámara', 0], ['transporte', '🚕', 'Transporte', 0], ['reloj', '⏱️', 'Reloj', 0], ['galeria', '🖼️', 'Galería', 0], ['mapa', '🗺️', 'Mapa', 0]];
       body.append(h('div', { class: 'ph-apps' }, apps.map(([id, ic, name, badge]) => h('button', { class: 'ph-app', onclick: () => {
         if (id === 'galeria') { g.screens.pause('galeria'); return; }
         if (id === 'mapa') { g.screens.pause('mapa'); return; }
         this.go(id);
       } }, h('span', { class: 'ic' }, ic), name, badge ? h('i', { class: 'badge' }, badge) : null))));
+    } else if (V === 'correo') {
+      title('Correo');
+      const box = h('div', { class: 'ph-mail' }); body.append(box); renderMail(box, g, () => this.render());
     } else if (V === 'msgs') {
       title('Mensajes');
       const order = CONTACTS.slice().sort((a, b) => (this.unread[b.id] || 0) - (this.unread[a.id] || 0) || (this.chats[b.id]?.length ? 1 : 0) - (this.chats[a.id]?.length ? 1 : 0));

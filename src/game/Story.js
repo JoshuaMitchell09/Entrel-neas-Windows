@@ -4,6 +4,7 @@ import { formatClock, rand, pick } from '../core/MathUtil.js';
 import { STADIUMS } from '../world/StadiumConfigs.js';
 import { ALL_ITEMS } from '../photography/Equipment.js';
 import { KEEPER_LOOKS, openShopCounter } from '../world/ShopCatalog.js';
+import { TIERS, tierOf } from '../career/Tiers.js';
 
 const ALVARO_TIPS = [
   'Seguí la jugada, no el balón. Cuando un extremo encara por la banda, ya deberías estar apuntando al área.',
@@ -53,22 +54,32 @@ export class Story {
   setup(ev, intro) {
     const g = this.game, st = g.stadium, city = g.city, P = city.P, I = g.interaction;
     this.ev = ev; this.intro = intro; this.stage = g.arcade ? 'street' : 'home'; this.gateHinted = false; this.designated = null;
+    this.amateur = ev.league === 'amigos' && !g.arcade; this.tierIdx = tierOf(ev);
     this.bindMatch(); this.briefed = false; this.kickedOff = false; this.inBowlOnce = false;
     this.clear();
     const add = (parent, o) => { const n = new NPC(g, parent, o); this.npcs.push(n); return n; };
     // ---------- Personajes principales ----------
-    this.mariana = add(city.group, { name: 'Mariana Quesada', role: 'story', look: LOOKS.mariana, pos: city.spots.mariana, yaw: 0, idle: 'clipboard' });
-    this.mariana.mapLabel = 'Mariana (acreditaciones)';
+    const home0 = g.team(ev.home);
+    if (this.amateur) {
+      // Mejenga: Andrés te recibe en la entrada del complejo (no hay acreditación)
+      this.mariana = add(st.group, { name: 'Andrés', role: 'story', look: { ...randomFan(home0), shirt: home0.colors.primary }, pos: st.spots.gateOutside.clone().add(new THREE.Vector3(2.2, 0, -2.5)), yaw: Math.PI, idle: 'talk' });
+      this.mariana.mapLabel = 'Andrés (te espera)';
+    } else {
+      this.mariana = add(city.group, { name: this.tierIdx === 5 ? 'Lucía Brenes' : 'Mariana Quesada', role: 'story', look: LOOKS.mariana, pos: city.spots.mariana, yaw: 0, idle: 'clipboard' });
+      this.mariana.mapLabel = this.tierIdx === 5 ? 'Lucía (acreditaciones)' : 'Mariana (acreditaciones)';
+    }
     this.guard = add(st.group, { name: 'Oficial Brenes', role: 'story', look: LOOKS.guard, pos: st.spots.guard, yaw: 0, idle: 'loco' });
     this.guard.mapLabel = 'Seguridad';
     if (city.spots.boothGuard) add(city.group, { name: 'Guarda del parqueo', look: LOOKS.guard, pos: city.spots.boothGuard, yaw: Math.PI, idle: 'loco', chatty: 0.3 }).mapLabel = 'Parqueo de prensa';
-    this.alvaro = add(st.group, { name: 'Kendall Rojas', role: 'story', look: LOOKS.alvaro, pos: st.spots.alvaro, yaw: -Math.PI / 2, idle: 'sit', camera: 400 });
-    this.alvaro.mapLabel = 'Kendall Rojas';
+    this.alvaro = this.amateur
+      ? add(st.group, { name: 'Diego', role: 'story', look: { ...randomFan(home0), shirt: home0.colors.primary, pants: home0.colors.shorts }, pos: st.spots.alvaro, yaw: -Math.PI / 2, idle: 'talk' })
+      : add(st.group, { name: 'Kendall Rojas', role: 'story', look: LOOKS.alvaro, pos: st.spots.alvaro, yaw: -Math.PI / 2, idle: 'sit', camera: 400 });
+    this.alvaro.mapLabel = this.amateur ? 'Diego' : 'Kendall Rojas';
     g.storyNPCs = [this.mariana, this.guard, this.alvaro];
     // Policías en la plaza, periodistas en fila, vendedores
     add(city.group, { name: 'Policía', look: LOOKS.police, pos: new THREE.Vector3(4, 0, st.gateZ + 8), yaw: Math.PI, idle: 'loco' });
     add(city.group, { name: 'Policía', look: LOOKS.police, pos: new THREE.Vector3(-5, 0, st.gateZ + 10), yaw: Math.PI * 0.8, idle: 'talk', chatty: 0.5 });
-    add(city.group, { name: 'Periodista', look: LOOKS.journalist, pos: city.spots.mariana.clone().add(new THREE.Vector3(1.5, 0, 3.4)), yaw: Math.PI, idle: 'talk', chatty: 0.6 });
+    if (!this.amateur) add(city.group, { name: 'Periodista', look: LOOKS.journalist, pos: city.spots.mariana.clone().add(new THREE.Vector3(1.5, 0, 3.4)), yaw: Math.PI, idle: 'talk', chatty: 0.6 });
     for (const v of city.vendorSpots) add(city.group, { name: 'Vendedor', look: LOOKS.vendor, pos: v.pos, yaw: Math.PI, idle: 'wave', chatty: 1 });
     // Aficionados caminando y en grupos
     const home = g.team(ev.home), away = g.team(ev.away);
@@ -88,7 +99,7 @@ export class Story {
     g.stewards = st.spots.stewards.map((p) => add(st.group, { name: 'Steward', look: LOOKS.steward, pos: p, yaw: p.z > 0 ? Math.PI : 0, idle: 'loco', speed: 2 }));
     const stoolM = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.6, metalness: 0.4 });
     const stool = (pos) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.44, 10), stoolM); m.position.set(pos.x, 0.22, pos.z); m.castShadow = true; st.group.add(m); this.props.push(m); };
-    stool(st.spots.alvaro);
+    if (!this.amateur) stool(st.spots.alvaro);
     for (const p of st.spots.photographers) { if (Math.random() < 0.7) p.userData = 'sit'; }
     for (const p of st.spots.photographers) add(st.group, { name: 'Fotógrafo', look: { ...LOOKS.photog, skin: pick(['#e0ac85', '#c68d63', '#a86f48', '#f1c9a5']), vest: pick(['#0b3d91', '#c8102e', '#2a9d8f']) }, pos: p, yaw: p.x > 0 ? -Math.PI / 2 : Math.PI / 2, idle: p.userData === 'sit' ? (stool(p), 'sit') : 'kneel', camera: pick([300, 400, 600]) });
     // Locales con interior: dependiente detrás del mostrador y clientes sentados
@@ -110,9 +121,9 @@ export class Story {
     I.clear();
     for (const [fs, v] of stallNPCs) I.add({ position: fs.counter, radius: 1.8, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Comprar en ${fs.name}`, onInteract: () => { v.playOnce('talk', 3); g.audio?.talk?.(v.pos.clone().setY(1.6), 1.2, 1.2); openShopCounter(g, fs); } });
     for (const [sh, k] of shopNPCs) I.add({ position: sh.counter, radius: 2.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Comprar en ${sh.name}`, onInteract: () => { k.playOnce('talk', 3); g.audio?.talk?.(k.pos.clone().setY(1.6), 1.2, sh.kind === 'bar' ? 0.9 : 1.4); openShopCounter(g, sh); } });
-    I.add({ position: this.mariana.pos.clone().setY(1.2).add(new THREE.Vector3(0, 0, 2)), radius: 3.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con Mariana`, onInteract: () => this.talkMariana() });
+    I.add({ position: this.mariana.pos.clone().setY(1.2).add(new THREE.Vector3(0, 0, this.amateur ? 0 : 2)), radius: 3.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con ${this.mariana.name.split(' ')[0]}`, onInteract: () => (this.amateur ? this.talkFriendGate() : this.talkMariana()) });
     I.add({ position: st.spots.guard.clone().setY(1.2), radius: 3.5, prompt: () => this.stage === 'street' || this.stage === 'credential' ? `<kbd>${g.ui.key('interact')}</kbd>Presentarse en seguridad` : null, onInteract: () => this.security() });
-    I.add({ getPosition: () => this.alvaro.pos.clone().setY(1), position: this.alvaro.pos, radius: 3, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con Kendall Rojas`, onInteract: () => this.talkAlvaro() });
+    I.add({ getPosition: () => this.alvaro.pos.clone().setY(1), position: this.alvaro.pos, radius: 3, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>${this.amateur && this.stage === 'post' ? 'Pasarle las fotos a Diego' : 'Hablar con ' + this.alvaro.name}`, onInteract: () => (this.amateur ? this.talkDiego() : this.talkAlvaro()) });
     g.inventory.prepared = false; g.player.syncSecondCamera?.();
     I.add({ position: st.spots.prepBench.clone().setY(1), radius: 2.6, prompt: () => (!g.inventory.prepared && ['inside', 'field'].includes(this.stage) ? `<kbd>${g.ui.key('interact')}</kbd>Preparar equipo` : null), onInteract: () => this.prepare() });
     I.add({ position: st.pressDoor.center, radius: 2.4, prompt: () => (st.pressDoor.isOpen ? null : `<kbd>${g.ui.key('interact')}</kbd>Abrir: Sala de prensa`), onInteract: () => {
@@ -146,7 +157,7 @@ export class Story {
     } });
     // ---------- Arranque ----------
     g.missions.clearEventMissions();
-    g.inventory.credential = null; g.missions.add('m_acred');
+    g.inventory.credential = null; if (!this.amateur) g.missions.add('m_acred');
     this.setObjective();
     // Hora de llegada: normal (~media hora antes) u horas antes del saque
     const arrive = ev.arrive || (intro ? 34 : 26), early = arrive > 45;
@@ -156,11 +167,25 @@ export class Story {
     const guests = g.phone.onEventStart(ev, { early });
     g.crowdLife.setup(ev, guests);
     if (early) setTimeout(() => g.ui.hint('Llegaste temprano', `Faltan ${Math.floor(arrive / 60)} h ${arrive % 60 ? (arrive % 60) + ' min' : ''} para el saque. El estadio se va llenando poco a poco y los equipos salen a calentar 45 min antes.<br><br>Usá el <b>teléfono</b> (<kbd>${g.ui.key('phone')}</kbd>) para escribirle a tu familia, publicar fotos o <b>esperar</b> con el reloj.`, 12000), 1200);
-    setTimeout(() => g.ui.hint(intro ? 'Primera cobertura' : 'Saliendo de casa', `${intro ? 'Hoy es tu primera cobertura. ' : ''}Estás en tu casa. Para llegar al estadio podés:<br>🚗 manejar tu carro (está al frente)<br>🚌 tomar el bus en la parada de la par<br>🚕 pedir un taxi o un Uber con el teléfono (<kbd>${g.ui.key('phone')}</kbd> → Transporte)<br><br><kbd>W A S D</kbd>moverse · <kbd>Shift</kbd>correr · <kbd>${g.ui.key('interact')}</kbd>interactuar · <kbd>M</kbd>mapa · <kbd>Esc</kbd>pausa`, 14000), 600);
+    setTimeout(() => g.ui.hint(intro ? (this.amateur ? 'La primera mejenga' : 'Primera cobertura') : 'Saliendo de casa', `${intro ? (this.amateur ? 'Hoy le tomás fotos a Los Compas en el fut 7. ' : 'Hoy es tu primera cobertura. ') : ''}Estás en tu casa. Para llegar ${this.amateur ? 'al complejo' : 'al estadio'} podés:<br>🚗 manejar tu carro (está al frente)<br>🚌 tomar el bus en la parada de la par<br>🚕 pedir un taxi o un Uber con el teléfono (<kbd>${g.ui.key('phone')}</kbd> → Transporte)<br><br><kbd>W A S D</kbd>moverse · <kbd>Shift</kbd>correr · <kbd>${g.ui.key('interact')}</kbd>interactuar · <kbd>M</kbd>mapa · <kbd>Esc</kbd>pausa`, 14000), 600);
   }
   setObjective() {
     if (!this.ev) return;
     const g = this.game, s = this.stage, ko = formatClock(this.ev.kickoff);
+    if (this.amateur) {
+      const A = {
+        home: `Salí de tu casa y andá al ${STADIUMS[this.ev.stadium].name}: tu carro, el bus o un taxi/Uber con el teléfono (${g.ui.key('phone')}).`,
+        street: 'Andrés te espera en la entrada del complejo.',
+        credential: 'Entrá al complejo por la puerta principal.',
+        inside: g.inventory.prepared ? `Andá a la orilla de la cancha: Diego te espera. Saque: ${ko}.` : 'Prepará tu cámara en la banca del pasillo (a la derecha).',
+        field: 'Hablá con Diego a la orilla de la cancha.',
+        briefed: this.kickedOff ? 'Tomale fotos a la mejenga: goles, jugadas y celebraciones.' : `Fotografiá el calentamiento. La mejenga empieza a las ${ko} (T: esperar).`,
+        match: 'Tomale fotos a la mejenga.',
+        post: '¡Se acabó! Pasale tus mejores fotos a Diego (a la orilla de la cancha).',
+        done: 'Fotos entregadas al grupo.',
+      };
+      g.ui.setObjective(A[s] || ''); return;
+    }
     const T = {
       home: `Salí de tu casa y elegí cómo llegar al estadio: tu carro (frente a la casa), el bus (parada a la par) o pedí un taxi o un Uber con el teléfono (${g.ui.key('phone')}).`,
       street: 'Recogé tu acreditación en el toldo azul de prensa (plaza del estadio).',
@@ -177,10 +202,12 @@ export class Story {
   objectivePos() {
     const g = this.game, st = g.stadium;
     if (this.designated && ['briefed', 'match'].includes(this.stage)) return this.objectivePosDesignated();
+    if (this.amateur) return { home: this.mariana?.pos, street: this.mariana?.pos, credential: st.spots.gateInside, inside: g.inventory.prepared ? this.alvaro?.pos : st.spots.prepStand, field: this.alvaro?.pos, post: this.alvaro?.pos }[this.stage] || null;
     return { home: this.mariana?.pos, street: this.mariana?.pos, credential: st.spots.guard, inside: g.inventory.prepared ? this.alvaro?.pos : st.spots.prepStand, field: this.alvaro?.pos, post: st.spots.laptop }[this.stage] || null;
   }
   async talkMariana() {
-    const g = this.game, inv = g.inventory, ev = this.ev, M = { who: 'Mariana Quesada', role: 'Coordinadora de prensa', color: '#0b3d91', initials: 'MQ', pitch: 1.5, pos: this.mariana.pos.clone().setY(1.6) };
+    const g = this.game, inv = g.inventory, ev = this.ev, T = this.tierIdx, fl = g.career.flags || (g.career.flags = {});
+    const M = T === 5 ? { who: 'Lucía Brenes', role: 'Jefa de prensa · Selección Nacional', color: '#1b3fa6', initials: 'LB', pitch: 1.4, pos: this.mariana.pos.clone().setY(1.6) } : { who: 'Mariana Quesada', role: 'Coordinadora de prensa de la Liga', color: '#0b3d91', initials: 'MQ', pitch: 1.5, pos: this.mariana.pos.clone().setY(1.6) };
     this.mariana.playOnce('talk', 6);
     if (inv.credential && inv.credential.eventId === ev.id) {
       await g.ui.dialogue([{ ...M, text: pick([`Ya tenés tu acreditación, ${g.playerName}. El acceso de prensa está al fondo de la plaza.`, 'Recordá: nada de pisar la cancha. ¡Suerte!', `El partido arranca a las ${formatClock(ev.kickoff)}. ¡No te me atrasés!`]) }]);
@@ -195,6 +222,18 @@ export class Story {
       { ...M, text: `¡${g.playerName}! Hoy es noche de Copa Centroamericana: ${g.teamName(ev.home)} contra ${g.teamName(ev.away)}. La organización internacional emite su propia acreditación.` },
       { ...M, text: 'Aquí está: es la especial de la copa, con tu número y el holograma verde. El chaleco verde de prensa es obligatorio en el campo. No la perdás.' },
       { ...M, text: `El encargo del editor: «${ev.assignment.title}». Hay más cámaras y más seguridad que en la liga: respetá las zonas.`, options: [{ label: '¡Gracias, Mariana!', value: 1 }] },
+    ] : T === 5 ? [
+      { ...M, text: `${g.playerName}, bienvenido/a a la Selección. Soy Lucía Brenes, jefa de prensa. Hoy juega Costa Rica contra ${g.teamName(ev.away)} en el Estadio Nacional.` },
+      { ...M, text: 'Esta es tu acreditación de la Selección. Hay revisión de seguridad especial y la zona de fotógrafos está detrás de las porterías. El himno es un momento sagrado: buscá la foto, pero sin estorbar.' },
+      { ...M, text: `El encargo de Ascenso Total: «${ev.assignment.title}». ¡Pura vida y mucha suerte!`, options: [{ label: '¡Gracias, Lucía!', value: 1 }] },
+    ] : !g.arcade && !fl.metMariana ? [
+      { ...M, text: `¡Hola! Vos debés ser ${g.playerName}, el fotógrafo/la fotógrafa que mandó el correo. Soy Mariana Quesada, coordinadora de prensa de la Liga: yo entrego las acreditaciones en todos los partidos oficiales.` },
+      { ...M, text: 'Dejame ver la lista… aquí estás. Esta es tu primera acreditación: es personal e intransferible. Ya no es una mejenga, aquí hay reglas.' },
+      { ...M, text: 'Te da acceso al túnel, a la sala de prensa y a las zonas de fotógrafos pintadas detrás de las porterías. Nunca pisés la cancha ni entrés al área técnica mientras se juega. Tres faltas y seguridad te saca.' },
+      { ...M, text: `Hoy juegan ${g.teamName(ev.home)} y ${g.teamName(ev.away)} a las ${formatClock(ev.kickoff)}. Kendall Rojas, un fotógrafo veterano, te espera en la zona de prensa: aprendé todo lo que puedas de él.`, options: [{ label: '¡Gracias, Mariana!', value: 1 }] },
+    ] : !g.arcade && T >= 3 && !fl.primeraWelcome ? [
+      { ...M, text: `¡${g.playerName}! Me contó Ricardo que ahora sos colaborador/a de Ascenso Total. ¡Qué orgullo! De las ligas menores a la Primera.` },
+      { ...M, text: `Aquí está tu acreditación de Primera División. El encargo del editor es «${ev.assignment.title}». Aquí todo va más rápido: anticipá.`, options: [{ label: '¡Gracias, Mariana!', value: 1 }] },
     ] : this.intro ? [
       { ...M, text: `¡Hola! Vos debés ser ${g.playerName}, ${g.female ? 'la nueva colaboradora' : 'el nuevo colaborador'} de Ascenso Total. Soy Mariana Quesada, coordinadora de prensa de la Liga.` },
       { ...M, text: 'Dejame verificar en la lista… aquí estás. Esta es tu acreditación: es personal e intransferible.' },
@@ -206,6 +245,7 @@ export class Story {
       { ...M, text: `Aquí está tu acreditación. El encargo del editor es: «${ev.assignment.title}». ${ev.clasico ? 'Es clásico: seguridad está más estricta que nunca.' : 'Ya sabés las reglas.'}`, options: [{ label: 'Gracias', value: 1 }] },
     ];
     await g.ui.dialogue(lines);
+    if (!g.arcade) { fl.metMariana = true; if (T >= 3) fl.primeraWelcome = true; }
     const d = new Date();
     inv.credential = { eventId: ev.id, league: ev.league || null, cup: !!ev.cup && !ev.official, official: ev.official || null, seat: 10 + Math.floor(Math.random() * 80), event: `${ev.title} · ${g.team(ev.home).short} vs ${g.team(ev.away).short}`, home: ev.home, away: ev.away, stadium: st.name, date: d.toLocaleDateString('es-CR') + ' · ' + formatClock(ev.kickoff), number: `LT-26-${String(Math.floor(Math.random() * 9000) + 1000)}` };
     if (!inv.owned.credential) inv.owned.credential = 1;
@@ -226,7 +266,7 @@ export class Story {
     if (this.stage !== 'credential' && this.stage !== 'street') return;
     await g.ui.dialogue([
       { ...G, text: '¿Me permite su acreditación, por favor?' },
-      { ...G, text: `${g.playerName}… Ascenso Total… zona Foto · Campo, número ${inv.credential.number}. Todo en orden.` },
+      { ...G, text: `${g.playerName}… ${['', 'prensa de ligas menores', 'Atlético El Llano', 'Ascenso Total', 'Ascenso Total', 'Selección Nacional'][this.tierIdx] || 'Ascenso Total'}… zona Foto · Campo, número ${inv.credential.number}. Todo en orden.` },
       { ...G, text: 'Ponga la mochila en la banda del escáner y pase por el arco detector, por favor.' },
     ]);
     // Secuencia de inspección real: la mochila viaja por la banda y el jugador cruza el arco
@@ -294,7 +334,7 @@ export class Story {
     battery.position.copy(bag.position).add(new THREE.Vector3(0, 0.12, 0)); await move(battery, center.clone().add(new THREE.Vector3(0, -0.06, 0)), 0.7); battery.visible = false; g.audio?.ui('click');
     await step('Paso 5 de 7', `Insertá la tarjeta <b>${inv.card.name}</b> (${inv.cardCapacity - inv.cardUsed} fotos libres).`, [['Insertar tarjeta', 1]]);
     card.position.copy(bag.position).add(new THREE.Vector3(0, 0.12, 0)); await move(card, center.clone().add(new THREE.Vector3(-0.06, 0.01, 0.03)), 0.7); card.visible = false; g.audio?.ui('click');
-    const sport = await step('Paso 6 de 7', 'Encendé la cámara y revisá los ajustes. ¿Cargar el perfil de deportes recomendado por Kendall Rojas (AF-C, 1/1000, ISO AUTO, ráfaga)?', [['Sí, perfil deportes', true], ['Mantener mis ajustes', false]]);
+    const sport = await step('Paso 6 de 7', `Encendé la cámara y revisá los ajustes. ¿Cargar el perfil de deportes${this.amateur ? '' : ' recomendado por Kendall Rojas'} (AF-C, 1/1000, ISO AUTO, ráfaga)?`, [['Sí, perfil deportes', true], ['Mantener mis ajustes', false]]);
     g.audio?.ui('beep');
     if (sport) { const s2 = g.photoMode.s; s2.af = 'AF-C'; s2.shutterIdx = 10; s2.isoIdx = 0; s2.ev = 0; s2.drive = 'burst'; s2.wbIdx = 0; }
     await step('Paso 7 de 7', 'Todo listo. Colgate la cámara y volvé a ponerte la mochila.', [['Colgarme la cámara', 1]]);
@@ -307,12 +347,64 @@ export class Story {
     g.ui.toast(`Equipo listo: ${inv.camera.name} + ${L.short}`, 'good', 3000);
     g.saves.save('auto');
   }
+  // ---------- Mejengas con los amigos ----------
+  async talkFriendGate() {
+    const g = this.game, st = g.stadium, ev = this.ev;
+    const A = { who: 'Andrés', role: 'Amigo · Los Compas F.C.', color: '#f4a261', initials: 'AN', pitch: 1.1, pos: this.mariana.pos.clone().setY(1.6) };
+    this.mariana.playOnce('talk', 5);
+    if (this.stage !== 'street' && this.stage !== 'home') { await g.ui.dialogue([{ ...A, text: pick(['¡Dele, mae! Diego está a la orilla de la cancha.', 'Tomame una buena, que mi mamá sigue tu Lente 😂', '¡Vamos, Compas!']) }]); return; }
+    const first = this.intro;
+    await g.ui.dialogue(first ? [
+      { ...A, text: `¡${g.playerName}! ¡Llegó el fotógrafo/la fotógrafa! Diego no para de hablar de las fotos que nos vas a tomar 😂` },
+      { ...A, text: 'Aquí no hay acreditación ni nada, mae: pasá, el del portón ya sabe que venís con nosotros. Si querés alistar la cámara, en el pasillo hay una banca.' },
+      { ...A, text: `Jugamos contra ${g.teamName(ev.away)} a las ${formatClock(ev.kickoff)}. Diego está a la orilla de la cancha. ¡Sacanos guapos!`, options: [{ label: '¡De una, mae!', value: 1 }] },
+    ] : [
+      { ...A, text: `¡Mae, llegaste! Hoy es contra ${g.teamName(ev.away)}. ${pick(['Ya la gente del barrio anda preguntando por tus fotos.', 'Las fotos de la vez pasada las puso mi mamá de fondo de pantalla 😂', 'Diego dice que hoy mete gol seguro.'])}`, options: [{ label: '¡Vamos!', value: 1 }] },
+    ]);
+    g.inventory.credential = { amateur: true, eventId: ev.id, event: ev.title, home: ev.home, away: ev.away, stadium: STADIUMS[ev.stadium].name, number: '—' };
+    st.gate.open(); g.audio?.ui('door');
+    this.stage = 'credential'; this.setObjective(); g.saves.save('auto');
+  }
+  async talkDiego() {
+    const g = this.game, ev = this.ev;
+    const D = { who: 'Diego', role: 'Amigo · capitán de Los Compas', color: '#2a9d8f', initials: 'DG', pitch: 1, pos: this.alvaro.pos.clone().setY(1.2) };
+    this.alvaro.playOnce('talk', 5);
+    if (this.stage === 'post') {
+      await g.ui.dialogue([{ ...D, text: `¡Qué partidazo, ${g.playerName}! Pasame las mejores al grupo, máximo diez. Si salen buenas las subimos a Lente y las ve todo el barrio.` }]);
+      g.openDelivery(); return;
+    }
+    if (this.stage === 'inside' || this.stage === 'field' || this.stage === 'credential') {
+      const first = this.intro && !this.introDone;
+      const lines = first ? [
+        { ...D, text: `¡Mae, viniste! Gracias por hacer esto gratis, de verdad. Con estas fotos el equipo se va a ver de Primera 😂` },
+        { ...D, text: `Yo no sé nada de fotos, pero vi un video: dicen que se saca la cámara con ${g.ui.key('equip')}, con clic derecho se ve por el visor y con la rueda se hace zoom.` },
+        { ...D, text: `Y que para que no salgamos movidos hay que poner la velocidad rápida, como 1/1000. En el visor ${g.ui.key('paramPrev')} y ${g.ui.key('paramNext')} eligen qué cambiar y ${g.ui.key('paramDec')}/${g.ui.key('paramInc')} lo cambian. Con ${g.ui.key('driveMode')} tirás en ráfaga.` },
+        { ...D, text: 'Aquí la cancha es chiquitica y todo pasa rapidísimo. Ponete detrás de un marco o a la orilla y esperá la jugada. Tomame unas del calentamiento para ir practicando.', options: [{ label: '¡Listo, Diego!', value: 1 }] },
+      ] : [
+        { ...D, text: `${pick(['¡Pura vida, mae!', '¡Llegó el profesional!', '¡Mae, hoy sí!'])} Hoy es contra ${g.teamName(ev.away)}. Lo que queremos: «${ev.assignment.title}». ${pick(['Si meto gol, me tomás la celebración, ¿ok?', 'Ponete detrás del marco, que ahí se ven las caras.', 'Las de la vez pasada quedaron brutales.'])}`, options: [{ label: '¡De una!', value: 1 }] },
+      ];
+      await g.ui.dialogue(lines);
+      this.stage = 'briefed'; this.briefed = true; this.setObjective(); g.events.emit('story:alvaro');
+      if (first) { g.missions.add('m_calentamiento'); setTimeout(() => g.ui.hint('Modo fotografía', `<kbd>${g.ui.key('equip')}</kbd>equipar cámara<br><kbd>Clic der.</kbd>visor · <kbd>Clic</kbd>disparar · <kbd>Rueda</kbd>zoom<br><kbd>${g.ui.key('paramPrev')}</kbd>/<kbd>${g.ui.key('paramNext')}</kbd> parámetro · <kbd>${g.ui.key('paramDec')}</kbd>/<kbd>${g.ui.key('paramInc')}</kbd> valor<br><kbd>${g.ui.key('autofocus')}</kbd>autofoco · <kbd>${g.ui.key('driveMode')}</kbd>ráfaga · <kbd>${g.ui.key('crouch')}</kbd>agacharse<br><kbd>${g.ui.key('gallery')}</kbd>galería · <kbd>T</kbd>esperar el saque`, 20000), 400); }
+      return;
+    }
+    const opts = [{ label: 'Dale', value: 0 }]; if (!this.kickedOff) opts.unshift({ label: 'Estoy listo, que empiece', value: 'ready' });
+    const v = await g.ui.dialogue([{ ...D, text: pick(['¡Concentrado/a, mae! Que no se te pase el gol.', 'Ponete detrás del marco cuando ataquemos.', 'Después me pasás las fotos, ¿ok?']), options: opts }]);
+    if (v === 'ready') this.kickoffNow();
+  }
   tween(dur, fn) { return new Promise((res) => { this.timers.push({ t: 0, dur, fn, res }); }); }
   async talkAlvaro() {
     const g = this.game, A = { who: 'Kendall Rojas', role: 'Fotógrafo veterano · mentor', color: '#4a5d23', initials: 'KR', pitch: 0.85, pos: this.alvaro.pos.clone().setY(1.2) };
     if (this.stage === 'inside' || this.stage === 'field') {
+      const fl = g.career.flags || (g.career.flags = {});
+      const meet = !g.arcade && !fl.metKendall;
       const first = !this.introDone && this.intro;
-      const lines = first ? [
+      const lines = meet && !first ? [
+        { ...A, text: `¡Diay! Así que vos sos ${g.playerName}, el/la de las fotos de las mejengas que andan rodando en Lente. Kendall Rojas, treinta años detrás de estas porterías.` },
+        { ...A, text: 'Le voy a decir lo que nadie me dijo a mí: aquí no se viene a ver el partido, se viene a trabajar. Uno no sigue el balón, sigue la jugada.' },
+        { ...A, text: 'Detrás de la portería están las mejores caras: remates de frente, atajadas y celebraciones que vienen hacia uno. Arrodíllese con C y limpie el fondo.' },
+        { ...A, text: `Y al final escoja pocas y buenas. El que evalúa no quiere veinte fotos iguales. Hoy el encargo es «${this.ev.assignment.title}». ¡A trabajar!`, options: [{ label: 'Gracias, Kendall', value: 1 }] },
+      ] : first ? [
         { ...A, text: `¡Diay, mae! Vos sos ${g.playerName}, ${g.female ? 'la nueva' : 'el nuevo'}. Kendall Rojas, treinta años sentado detrás de estas porterías. ${g.female ? 'Bienvenida' : 'Bienvenido'} a la cancha.` },
         { ...A, text: `Primero lo primero: sacá la cámara con ${g.ui.key('equip')}. Con clic derecho levantás el visor y con la rueda del mouse hacés zoom.` },
         { ...A, text: `En fútbol la velocidad lo es todo: a 1/1000 o más rápido congelás a los jugadores. En el visor, ${g.ui.key('paramPrev')} y ${g.ui.key('paramNext')} eligen el parámetro; ${g.ui.key('paramDec')} y ${g.ui.key('paramInc')} lo cambian. Dejá el ISO en AUTO si la luz cambia.` },
@@ -324,6 +416,7 @@ export class Story {
       ];
       this.alvaro.playOnce('talk', 5);
       await g.ui.dialogue(lines);
+      if (!g.arcade) fl.metKendall = true;
       this.stage = 'briefed'; this.briefed = true; this.setObjective(); g.events.emit('story:alvaro');
       if (this.intro) g.missions.add('m_calentamiento');
       for (const id of this.ev.missions) if (id !== 'm_entrega' && id !== 'm_calentamiento') g.missions.add(id);
@@ -333,7 +426,7 @@ export class Story {
     }
     const opts = [{ label: 'Gracias', value: 0 }];
     if (!this.kickedOff) opts.unshift({ label: 'Estoy listo para el partido', value: 'ready' });
-    const v = await g.ui.dialogue([{ ...A, text: this.stage === 'post' ? 'Buen partido. Ahora andá a la sala de prensa y escogé con cabeza fría: pocas y buenas.' : pick(ALVARO_TIPS), options: opts }]);
+    const v = await g.ui.dialogue([{ ...A, text: this.stage === 'post' ? 'Buen partido. Ahora vaya a la sala de prensa y escoja con cabeza fría: pocas y buenas.' : pick(ALVARO_TIPS), options: opts }]);
     if (v === 'ready') this.kickoffNow();
   }
   kickoffNow() { const g = this.game; if (!this.kickedOff) g.clock = Math.max(g.clock, this.ev.kickoff); }
@@ -343,7 +436,8 @@ export class Story {
       await g.ui.dialogue([{ who: 'Laptop de prensa', role: 'Ascenso Total', color: '#0b3d91', initials: 'AT', voice: false, text: 'Sistema de envío de Ascenso Total. Podrás entregar tus fotografías al editor cuando termine el partido. Mientras tanto, podés revisar tu galería con P.' }]);
       return;
     }
-    const E = { who: 'Ricardo Solano', role: 'Editor deportivo · videollamada', color: '#c8102e', initials: 'RS', pitch: 0.9 };
+    const ev0 = TIERS[this.tierIdx]?.evaluator || TIERS[3].evaluator;
+    const E = { who: ev0.who, role: ev0.role + ' · videollamada', color: ev0.color, initials: ev0.initials, pitch: 0.9 };
     await g.ui.dialogue([{ ...E, text: `Buenas, ${g.playerName}. Mandame tus mejores fotos, máximo diez. El encargo era «${this.ev.assignment.title}». Las reviso de una vez.` }]);
     g.openDelivery();
   }
@@ -352,8 +446,9 @@ export class Story {
     // Animaciones scriptadas
     for (const t of this.timers.slice()) { t.t += dt; t.fn(Math.min(1, t.t / t.dur)); if (t.t >= t.dur) { this.timers.splice(this.timers.indexOf(t), 1); t.res(); } }
     // Disparadores por ubicación
-    if (this.stage === 'home' && p.x > -172) { this.stage = 'street'; this.setObjective(); g.ui.toast('📍 Llegaste a la zona del estadio. Buscá el toldo azul de acreditaciones.', 'info', 4000); }
-    if (this.stage === 'credential' && p.z < st.gateZ + 14 && Math.abs(p.x) < 12 && !this.gateHinted) { this.gateHinted = true; g.ui.toast('Presentá tu acreditación al guardia de seguridad.', 'info'); g.events.emit('story:gate'); g.missions.add('m_seguridad'); }
+    if (this.stage === 'home' && p.x > -172) { this.stage = 'street'; this.setObjective(); g.ui.toast(this.amateur ? '📍 Llegaste al complejo. Andrés te espera en la entrada.' : '📍 Llegaste a la zona del estadio. Buscá el toldo azul de acreditaciones.', 'info', 4000); }
+    if (this.amateur && this.stage === 'credential' && p.z < st.gateZ - 1) { this.stage = 'inside'; this.setObjective(); g.missions.add('m_preparar'); }
+    if (!this.amateur && this.stage === 'credential' && p.z < st.gateZ + 14 && Math.abs(p.x) < 12 && !this.gateHinted) { this.gateHinted = true; g.ui.toast('Presentá tu acreditación al guardia de seguridad.', 'info'); g.events.emit('story:gate'); g.missions.add('m_seguridad'); }
     const inBowl = Math.abs(p.x) < 64 && Math.abs(p.z) < 43.6;
     if (inBowl && !this.inBowlOnce) { this.inBowlOnce = true; if (this.stage === 'inside') { this.stage = 'field'; this.setObjective(); } g.ui.toast(`${g.female ? 'Bienvenida' : 'Bienvenido'} al ${STADIUMS[this.ev.stadium].name}.`, 'info'); }
     // Reloj del día y saque inicial
@@ -382,8 +477,8 @@ export class Story {
       g.events.on('match:interviewDone', () => setTimeout(fin, 4000)); setTimeout(fin, 70000);
       return;
     }
-    this.stage = 'post'; this.setObjective(); g.missions.add('m_entrevista'); g.missions.add('m_entrega');
-    g.ui.toast(`¡Final del partido! 🎙️ ${who} da la entrevista en la zona mixta, junto al túnel. Después entregá tus fotos en la sala de prensa.`, 'mission', 7000);
+    this.stage = 'post'; this.setObjective(); if (!this.amateur) g.missions.add('m_entrevista'); g.missions.add('m_entrega');
+    g.ui.toast(this.amateur ? '¡Se acabó la mejenga! Pasale tus mejores fotos a Diego, a la orilla de la cancha.' : `¡Final del partido! 🎙️ ${who} da la entrevista en la zona mixta, junto al túnel. Después entregá tus fotos en la sala de prensa.`, 'mission', 7000);
     g.saves.save('auto');
   }
 }

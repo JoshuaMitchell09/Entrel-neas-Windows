@@ -27,7 +27,7 @@ async function boot() {
     window.game = game;
     await game.photos.ready;
     progress(0.25, 'Construyendo estadio…'); await tick();
-    game.buildLevel(EVENTS[0], (p, m) => progress(0.25 + p * 0.6, m));
+    game.buildLevel(EVENTS.find((e) => e.id === 'ev1') || EVENTS[0], (p, m) => progress(0.25 + p * 0.6, m));
     progress(0.9, 'Compilando materiales…'); await tick();
     game.renderer.compile(game.scene, game.camera);
     game.state = 'menu';

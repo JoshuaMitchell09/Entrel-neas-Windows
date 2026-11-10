@@ -1,13 +1,17 @@
 import { h } from './dom.js';
 
 // Notas de la versión: se muestran al abrir el juego cuando hay una versión nueva (y desde «Novedades» en el menú).
-export const VERSION = '0.9.2';
+export const VERSION = '0.10.0';
 export const AUTHOR = 'MitchellsVisuals';
 export const COPYRIGHT = `© ${new Date().getFullYear()} ${AUTHOR}. Todos los derechos reservados.`;
 
 export const CHANGELOG = {
   date: 'Noviembre 2026',
   news: [
+    ['📖', 'Modo historia por etapas', 'Empezás tomándole fotos a tus amigos en el fut 7 y el fut 5, escribís correos desde el celular a ligas menores, la Segunda y Ascenso Total, y subís hasta la Selección Nacional. Con capítulos que cuentan el camino del fotógrafo.'],
+    ['⚽', 'Fut 5 y fut 7', 'Complejos con canchas sintéticas cercadas con malla y partidos de 5 y 7 por lado.'],
+    ['🇨🇷', 'Estadio Nacional y la Selección', 'El último paso de la carrera: cubrir a Costa Rica en eliminatorias.'],
+    ['📧', 'Correo en el celular', 'Mandá tu portafolio y esperá la respuesta: a veces es sí y a veces es no.'],
     ['🎵', 'Música y ambiente de estadio', 'Música de inicio nueva y grabaciones reales de la afición: cánticos, festejo de gol, aplausos y el «uuuh» del público. Sonidos de afición de Gregor Quendel (CC BY 4.0).'],
     ['🏟️', 'Segunda División', 'Todos los partidos en el Estadio El Llano: gradería techada a la calle, sintética rayada y postes de luz.'],
     ['⚽', 'Ligas menores', 'Partidos U-17 y U-15 en los complejos La Cantera y Centro de Alto Rendimiento Rojinegro, con canchas de entrenamiento alrededor.'],
@@ -21,6 +25,9 @@ export const CHANGELOG = {
     ['📱', 'Grabar con el celular', 'Videos en horizontal o vertical para presentar tus mejores tomas.'],
   ],
   fixes: [
+    'La entrada de la zona de comidas ahora tiene puerta corrediza de vidrio.',
+    'En La Cantera y el Centro de Alto Rendimiento el letrero ya no tapa la puerta.',
+    'La foto del carnet ya no se pide al recoger la acreditación (va al crear la carrera) y el botón de guardar la acreditación siempre se ve.',
     'La zona de comidas ya no está en el pasillo de prensa: tiene entrada general desde la calle para el público.',
     'Se quitaron unas franjas amarillas que flotaban en la salida del túnel de prensa.',
     'Las puertas de entrada de Alajuela y Cartago ya no están bloqueadas.',

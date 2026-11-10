@@ -140,3 +140,16 @@ STADIUMS.fut5 = {
   hasBarra: false, tifo: 'Fut 5',
   description: 'Fut 5 techado: cinco contra cinco, mucha velocidad y los compas en la gradería.',
 };
+// ---------- Selección Nacional ----------
+// Estadio Nacional en La Sabana: moderno, techado alrededor, graderías de dos niveles y anillo de luces.
+STADIUMS.nacional = {
+  id: 'nacional', name: 'Estadio Nacional', city: 'La Sabana', capacity: 35000, tier: 3, league: 'seleccion',
+  nearRows: 32, endRows: 26, farRows: 32, rowDepth: 0.76, rowHeight: 0.5,
+  roof: 'full', corners: true, lights: 'roof', crowdDensity: 0.97,
+  seatColors: ['#1b3fa6', '#c8102e'], seatPattern: 'blocks', aisleColor: '#e9e9e9', aisleEvery: 10,
+  tiers: { near: { row: 16, rise: 2.6 }, far: { row: 16, rise: 2.6 } },
+  banners: { near: ['LA SELE · PURA VIDA', 'ESTADIO NACIONAL', 'VAMOS COSTA RICA'], far: ['ASCENSO TOTAL · FOTO Y VIDEO', 'UN SOLO PAÍS', 'LA SABANA'] },
+  facade: '#e9ecef', facadeBand: '#c8102e', facadeText: 'ESTADIO NACIONAL · LA SABANA',
+  hasBarra: true, tifo: 'Pura vida, Sele',
+  description: 'El Estadio Nacional en La Sabana: techo perimetral, dos niveles y treinta y cinco mil voces.',
+};
