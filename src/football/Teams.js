@@ -50,6 +50,25 @@ export const TEAMS = {
   puriscal: { id: 'puriscal', name: 'Juventud Puriscal', short: 'PUR', city: 'Puriscal', league: 'segunda',
     colors: { primary: '#ffffff', secondary: '#111111', shorts: '#111111', socks: '#ffffff', ink: '#111111' },
     gk: { shirt: '#c6ff00', shorts: '#111111' }, style: { pace: 0.96, pass: 0.93, shoot: 0.92 } },
+  // Los equipos de los amigos (mejengas de fut 5 y fut 7)
+  compas: { id: 'compas', name: 'Los Compas F.C.', short: 'CMP', city: 'Hatillo', league: 'amigos',
+    colors: { primary: '#0f5132', secondary: '#ffffff', shorts: '#111111', socks: '#0f5132', ink: '#ffffff' },
+    gk: { shirt: '#ff7a00', shorts: '#111111' }, style: { pace: 0.86, pass: 0.8, shoot: 0.82 } },
+  esquina: { id: 'esquina', name: 'Deportivo La Esquina', short: 'ESQ', city: 'Hatillo', league: 'amigos',
+    colors: { primary: '#ffcc00', secondary: '#111111', shorts: '#111111', socks: '#ffcc00', ink: '#111111' },
+    gk: { shirt: '#2b6cb0', shorts: '#111111' }, style: { pace: 0.85, pass: 0.78, shoot: 0.84 } },
+  oficina: { id: 'oficina', name: 'Los Oficinistas', short: 'OFI', city: 'San José', league: 'amigos',
+    colors: { primary: '#1d4ed8', secondary: '#ffffff', shorts: '#ffffff', socks: '#1d4ed8', ink: '#ffffff' },
+    gk: { shirt: '#e11d48', shorts: '#111111' }, style: { pace: 0.8, pass: 0.84, shoot: 0.8 } },
+  veteranos: { id: 'veteranos', name: 'Veteranos del Ocho', short: 'VET', city: 'Desamparados', league: 'amigos',
+    colors: { primary: '#7a1f1f', secondary: '#f5f5f5', shorts: '#f5f5f5', socks: '#7a1f1f', ink: '#ffffff' },
+    gk: { shirt: '#16a34a', shorts: '#111111' }, style: { pace: 0.78, pass: 0.88, shoot: 0.86 } },
+  relampago: { id: 'relampago', name: 'Relámpago F.C.', short: 'REL', city: 'Alajuelita', league: 'amigos',
+    colors: { primary: '#7c3aed', secondary: '#facc15', shorts: '#111111', socks: '#7c3aed', ink: '#facc15' },
+    gk: { shirt: '#f97316', shorts: '#111111' }, style: { pace: 0.9, pass: 0.78, shoot: 0.82 } },
+  soda: { id: 'soda', name: 'La Soda F.C.', short: 'SOD', city: 'Desamparados', league: 'amigos',
+    colors: { primary: '#f97316', secondary: '#ffffff', shorts: '#1f2937', socks: '#f97316', ink: '#ffffff' },
+    gk: { shirt: '#0ea5e9', shorts: '#111111' }, style: { pace: 0.84, pass: 0.8, shoot: 0.8 } },
 };
 // Ligas menores: las categorías inferiores de los clubes de Primera (U-17 y U-15)
 for (const [base, cat] of [['tibas', 'U-17'], ['toros', 'U-17'], ['brumas', 'U-17'], ['tibas', 'U-15'], ['toros', 'U-15'], ['cafetal', 'U-15']]) {

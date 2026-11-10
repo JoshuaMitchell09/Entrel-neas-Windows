@@ -34,8 +34,8 @@ export class Interview {
   constructor(match) {
     const m = (this.m = match), g = (this.game = match.game);
     this.mvp = pickMVP(m); this.t = 0; this.line = -1; this.done = false;
-    const HW = 34;
-    this.spot = new THREE.Vector3(6.5, 0, HW + 5.6);
+    const P = m.stadium?.P, HW = P ? P.W / 2 : 34;
+    this.spot = P && P.L < 100 ? new THREE.Vector3(4, 0, HW + (P.apron ?? 3) + 2.5) : new THREE.Vector3(6.5, 0, HW + 5.6);
     this.group = new THREE.Group(); m.scene.add(this.group);
     // Backing de patrocinadores
     const back = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 2.5), new THREE.MeshStandardMaterial({ map: backingTexture(), roughness: 0.6, side: THREE.DoubleSide }));

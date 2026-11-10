@@ -6,7 +6,8 @@ import { squad } from './Teams.js';
 import { Interview } from './Interview.js';
 import { clamp, rand, pick, dampAngle } from '../core/MathUtil.js';
 
-const L = 105, W = 68, HL = L / 2, HW = W / 2, GOAL_HW = 3.66, BAR = 2.44;
+// Dimensiones de la cancha: 105×68 en estadios; las canchas de fut 5 y fut 7 son más chicas (se fijan al crear el partido)
+let L = 105, W = 68, HL = L / 2, HW = W / 2, GOAL_HW = 3.66, BAR = 2.44, K = 1;
 
 // Catálogo de eventos deportivos: peso fotográfico y ventana temporal (segundos) del "momento".
 export const EVENT_INFO = {
@@ -39,10 +40,19 @@ const FORM = [
   ['GK', -0.96, 0], ['DEF', -0.66, -0.62], ['DEF', -0.72, -0.2], ['DEF', -0.72, 0.2], ['DEF', -0.66, 0.62],
   ['MID', -0.22, -0.66], ['MID', -0.32, -0.2], ['MID', -0.3, 0.2], ['MID', -0.22, 0.66], ['FWD', 0.12, -0.18], ['FWD', 0.08, 0.2],
 ];
+// Fut 7 (2-3-1) y fut 5 (2-1-1): el capitán es el volante central
+const FORMS = {
+  11: { form: FORM, cap: 6 },
+  7: { form: [['GK', -0.94, 0], ['DEF', -0.6, -0.45], ['DEF', -0.6, 0.45], ['MID', -0.18, -0.62], ['MID', -0.26, 0], ['MID', -0.18, 0.62], ['FWD', 0.12, 0]], cap: 4 },
+  5: { form: [['GK', -0.92, 0], ['DEF', -0.5, -0.4], ['DEF', -0.5, 0.4], ['MID', -0.1, 0], ['FWD', 0.2, 0]], cap: 3 },
+};
 
 export class Match {
   constructor(game, stadium, home, away, opts = {}) {
     this.game = game; this.stadium = stadium; this.teams = [home, away];
+    const pd = opts.pitch || {};
+    L = pd.L || 105; W = pd.W || 68; HL = L / 2; HW = W / 2; GOAL_HW = pd.goalW ? pd.goalW / 2 : 3.66; BAR = pd.goalH || 2.44; K = HL / 52.5;
+    this.n = pd.players || 11; this.small = this.n < 11; this.capIdx = (FORMS[this.n] || FORMS[11]).cap;
     this.group = new THREE.Group(); stadium.group.add(this.group); this.scene = this.group; this.halfSeconds = opts.halfSeconds || 240; this.events = [];
     this.score = [0, 0]; this.half = 1; this.minute = 0; this.time = 0; this.phase = 'warmup'; this.phaseT = 0;
     this.excite = 0.15; this.stats = { shots: [0, 0], saves: [0, 0], fouls: [0, 0], possession: [0, 0], corners: [0, 0], cards: [0, 0] };
@@ -50,10 +60,10 @@ export class Match {
     this.feed = []; this.goalScorers = [];
     for (let t = 0; t < 2; t++) {
       const sq = squad(this.teams[t].id).map((q) => (opts.youth ? { ...q, height: q.height * (this.teams[t].youth === 'U-15' ? 0.9 : 0.95) } : q));
-      FORM.forEach(([role, fx, fz], i) => { const p = new Footballer(this.scene, this.teams[t], t, sq[i], role, { fx, fz }, i === 6); p.noTouch = 0; if (opts.youth) p.maxSpeed *= 0.92; this.players[t].push(p); });
+      (FORMS[this.n] || FORMS[11]).form.forEach(([role, fx, fz], i) => { const p = new Footballer(this.scene, this.teams[t], t, sq[i], role, { fx, fz }, i === this.capIdx); p.noTouch = 0; if (opts.youth) p.maxSpeed *= 0.92; this.players[t].push(p); });
     }
     this.all = [...this.players[0], ...this.players[1]];
-    this.captains = [this.players[0][6], this.players[1][6]]; this.sideSign = 1;
+    this.captains = [this.players[0][this.capIdx], this.players[1][this.capIdx]]; this.sideSign = 1;
     this.buildOfficials(); this.buildBench(); this.setupWarmup();
   }
   // ---------- Construcción ----------
@@ -63,6 +73,7 @@ export class Match {
     this.ars = [{ h: mk('#f2e600'), pos: new THREE.Vector3(20, 0, -HW - 0.8), vel: new THREE.Vector3(), yaw: 0, kind: 'referee', side: 1, name: 'Asistente' },
       { h: mk('#f2e600'), pos: new THREE.Vector3(-20, 0, HW + 0.8), vel: new THREE.Vector3(), yaw: Math.PI, kind: 'referee', side: -1, name: 'Asistente' }];
     for (const o of [this.ref, ...this.ars]) { this.scene.add(o.h.root); o.h.root.position.copy(o.pos); }
+    if (this.small) for (const a of this.ars) a.h.root.visible = false;
     // Banderines de los asistentes (cuadros rojos y amarillos)
     const fc = document.createElement('canvas'); fc.width = fc.height = 32; const fx = fc.getContext('2d');
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { fx.fillStyle = (i + j) % 2 ? '#ffd400' : '#e01b24'; fx.fillRect(i * 8, j * 8, 8, 8); }
@@ -100,19 +111,19 @@ export class Match {
     for (let t = 0; t < 2; t++) {
       const side = t === 0 ? -1 : 1;
       this.players[t].forEach((p, i) => {
-        p.warm = { kind: i === 0 ? 'gk' : i < 7 ? 'pair' : i < 9 ? 'stretch' : 'jog', t: rand(0, 5), base: new THREE.Vector3(side * rand(10, 40), 0, rand(-25, 25)) };
+        p.warm = { kind: i === 0 ? 'gk' : i < 7 ? 'pair' : i < 9 ? 'stretch' : 'jog', t: rand(0, 5), base: new THREE.Vector3(side * rand(10, 40) * K, 0, rand(-25, 25) * K) };
         p.place(p.warm.base.x, p.warm.base.z, rand(-3, 3));
       });
       // Parejas (jugadores 1-6)
-      for (let k = 1; k < 7; k += 2) {
+      for (let k = 1; k + 1 < Math.min(7, this.n); k += 2) {
         const a = this.players[t][k], b = this.players[t][k + 1];
-        const cx = side * (12 + k * 4.5), cz = -18 + k * 5;
-        a.warm.base.set(cx, 0, cz - 6); b.warm.base.set(cx, 0, cz + 6); a.warm.partner = b; b.warm.partner = a;
-        a.place(cx, cz - 6, 0); b.place(cx, cz + 6, Math.PI);
-        const wb = new Ball(this.scene); wb.place(cx, cz - 5.4); wb.holder = a; this.warmBalls.push(wb); a.warm.ball = wb; b.warm.ball = wb;
+        const cx = side * (12 + k * 4.5) * K, cz = (-18 + k * 5) * K;
+        const pd = 6 * Math.max(0.6, K); a.warm.base.set(cx, 0, cz - pd); b.warm.base.set(cx, 0, cz + pd); a.warm.partner = b; b.warm.partner = a;
+        a.place(cx, cz - pd, 0); b.place(cx, cz + pd, Math.PI);
+        const wb = new Ball(this.scene); wb.place(cx, cz - pd + 0.6); wb.holder = a; this.warmBalls.push(wb); a.warm.ball = wb; b.warm.ball = wb;
       }
       const gk = this.players[t][0]; gk.warm.base.set(side * (HL - 1.5), 0, 0); gk.place(side * (HL - 1.5), 0, side > 0 ? -Math.PI / 2 : Math.PI / 2);
-      this.players[t][7].warm.base.set(side * 30, 0, 0); this.players[t][8].warm.base.set(side * 30, 0, 3);
+      if (this.players[t][8]) { this.players[t][7].warm.base.set(side * 30 * K, 0, 0); this.players[t][8].warm.base.set(side * 30 * K, 0, 3); }
     }
     this.ball.place(0, 0); this.ball.mesh.visible = true;
     this.logEvent('calentamiento', [], new THREE.Vector3(), { persistent: true });
@@ -146,7 +157,7 @@ export class Match {
     for (const p of this.all) { p.warm = null; p.h.play(p.role === 'GK' ? 'gkReady' : 'loco'); p.anim = 'loco'; p.lock = 0; }
     this.events = this.events.filter((e) => e.type !== 'calentamiento');
     this.kickoffTeam = Math.random() < 0.5 ? 0 : 1;
-    if (skipCeremony) {
+    if (skipCeremony || this.small) {
       this.phase = 'walkout'; this.phaseT = 0;
       this.addFeed('Los equipos se acomodan para el saque inicial.');
       this.game.events.emit('match:phase', 'walkout'); return;
@@ -156,7 +167,7 @@ export class Match {
     const offs = [[0, 0], [-0.9, 0], [0.9, 0]];
     [this.ref, ...this.ars].forEach((o, i) => { o.pos.set(offs[i][0], 0, HW + 12.5); o.cer = { delay: 0.5, target: new THREE.Vector3(offs[i][0] * 1.4, 0, 3.2) }; });
     for (let t = 0; t < 2; t++) this.players[t].forEach((p, i) => {
-      const order = (i + 1) % 11; // el capitán al frente después del portero
+      const order = (i + 1) % this.n; // el capitán al frente después del portero
       p.pos.set(t ? 0.85 : -0.85, 0, HW + 14 + order * 1.25); p.vel.set(0, 0, 0); p.yaw = Math.PI; p.mode = 'ceremony';
       p.cer = { delay: 1.2 + order * 0.55, target: new THREE.Vector3((t ? 1 : -1) * (2.4 + order * 1.15), 0, 3.2) };
     });
@@ -183,7 +194,7 @@ export class Match {
         // Foto oficial: cada equipo en su mitad, fila de atrás de pie y fila de adelante agachada
         this.phase = 'teamphoto'; this.phaseT = 0; this.photoPosed = false;
         for (let t = 0; t < 2; t++) {
-          const cx = (t ? 1 : -1) * 20, cz = 9, team = this.players[t];
+          const cx = (t ? 1 : -1) * 20 * K, cz = 9 * K, team = this.players[t];
           team.forEach((p, i) => { const back = i < 6, k = back ? i : i - 6; p.cer = { delay: 0, face: 0, kneel: !back, target: new THREE.Vector3(cx + (k - (back ? 2.5 : 2)) * 0.8, 0, back ? cz : cz + 0.95) }; });
         }
         refs.forEach((o, i) => { o.cer = { delay: 0, face: 0, target: new THREE.Vector3((i - 1) * 1.1, 0, 2) }; });
@@ -337,7 +348,7 @@ export class Match {
       } else if (w.kind === 'jog') {
         const side = Math.sign(w.base.x);
         const a = w.t * 0.25 + p.number;
-        p.moveToward(side * (28 + Math.cos(a) * 14), Math.sin(a) * 22, 3.2, dt);
+        p.moveToward(side * (28 + Math.cos(a) * 14) * K, Math.sin(a) * 22 * K, 3.2, dt);
         if (p.h.state !== 'loco') p.h.play('loco');
       } else if (w.kind === 'gk') {
         const tz = Math.sin(w.t * 0.8) * 2.5;
@@ -393,7 +404,7 @@ export class Match {
         let best = null, bt = Infinity;
         for (const p of this.active(t)) {
           if (p.mode === 'fallen' || p.lock > 0.2) continue;
-          if (p.role === 'GK' && !(Math.abs(ball.pos.x - this.goalX(this.opp(t))) < 17 && Math.abs(ball.pos.z) < 21)) continue;
+          if (p.role === 'GK' && !(Math.abs(ball.pos.x - this.goalX(this.opp(t))) < 17 * K && Math.abs(ball.pos.z) < 21 * K)) continue;
           const tt = p.pos.distanceTo(ball.pos) / p.maxSpeed;
           if (tt < bt) { bt = tt; best = p; }
         }
@@ -404,7 +415,7 @@ export class Match {
     if (owner) {
       const defT = this.opp(owner.team);
       const near = this.active(defT).filter((p) => p.role !== 'GK' && p.mode !== 'fallen').sort((a, b) => a.pos.distanceTo(owner.pos) - b.pos.distanceTo(owner.pos));
-      pressers.add(near[0]); if (Math.abs(owner.pos.x - this.goalX(owner.team)) < 30 && near[1]) pressers.add(near[1]);
+      pressers.add(near[0]); if (Math.abs(owner.pos.x - this.goalX(owner.team)) < 30 * K && near[1]) pressers.add(near[1]);
     }
     for (const p of this.all) {
       if (p.sentOff) { if (p.mode === 'leaving') { const d = p.moveToward(0, HW + 9, 2.2, dt); if (d < 1.5) { p.mode = 'gone'; p.root.visible = false; p.pos.set(0, -50, 60); } } continue; }
@@ -469,22 +480,23 @@ export class Match {
     p.decisionT -= dt;
     // Conducción: hacia la portería rival evitando al rival más cercano
     let tx = gx - d * 6, tz = p.pos.z * 0.8;
-    let avoid = null, ad = 6;
+    let avoid = null, ad = 6 * Math.max(0.6, K);
     for (const o of this.active(this.opp(p.team))) { const od = o.pos.distanceTo(p.pos); const ahead = (o.pos.x - p.pos.x) * d; if (od < ad && ahead > -0.5) { ad = od; avoid = o; } }
-    if (avoid) tz += (p.pos.z > avoid.pos.z ? 1 : -1) * 8;
-    if (p.role === 'DEF' && pressure > 8) tx = p.pos.x + d * 10;
+    if (avoid) tz += (p.pos.z > avoid.pos.z ? 1 : -1) * 8 * Math.max(0.5, K);
+    if (p.role === 'DEF' && pressure > 8) tx = p.pos.x + d * 10 * K;
     const dribSpeed = p.maxSpeed * (pressure < 3 ? 0.78 : 0.68);
     p.moveToward(clamp(tx, -HL + 1, HL - 1), clamp(tz, -HW + 2, HW - 2), dribSpeed, dt, 6);
     if (p.decisionT > 0) return;
     p.decisionT = rand(0.35, 0.85);
     // ¿Rematar?
-    const angleOk = Math.abs(p.pos.z) < 22;
-    let shootP = distGoal < 33 && angleOk ? Math.pow(clamp((35 - distGoal) / 30, 0, 1), 1.3) * 1.1 * (p.teamData.style?.shoot || 1) : 0;
-    if (distGoal < 18) shootP += 0.25;
+    const angleOk = Math.abs(p.pos.z) < 22 * K;
+    let shootP = distGoal < 33 * K && angleOk ? Math.pow(clamp((35 * K - distGoal) / (30 * K), 0, 1), 1.3) * 1.1 * (p.teamData.style?.shoot || 1) : 0;
+    if (distGoal < 18 * K) shootP += 0.25;
+    if (this.small && Math.abs(p.pos.z) < HW * 0.8) shootP = Math.max(shootP, clamp(1 - distGoal / (HL * 1.1), 0, 1) * 0.95 + 0.06); // en fut 5 / fut 7 se remata mucho más
     if (p.role === 'DEF') shootP *= 0.25;
     if (Math.random() < shootP) return this.shoot(p, false);
     // ¿Centro desde la banda?
-    if ((gx - p.pos.x) * d < 24 && Math.abs(p.pos.z) > 15 && Math.random() < 0.7) return this.cross(p);
+    if (!this.small && (gx - p.pos.x) * d < 24 && Math.abs(p.pos.z) > 15 && Math.random() < 0.7) return this.cross(p);
     // ¿Regate ante presión?
     if (pressure < 2.6 && avoid && Math.random() < 0.32 + p.skill * 0.2) return this.dribble(p, avoid);
     // Pase
@@ -515,7 +527,7 @@ export class Match {
       if (k.kind !== 'clear' && Math.random() < 0.5) this.logEvent('pase', [p, k.extra.target].filter(Boolean), p.pos, { team: p.team });
       // Fuera de juego: se juzga en el momento del pase (no en saques de banda, esquina ni de meta)
       const recv = k.extra.target;
-      if (recv && this.phase === 'play' && this.time - (this.restartExecAt ?? -9) > 0.6 && this.time - (this.lastOffside ?? -99) > 20) {
+      if (recv && !this.small && this.phase === 'play' && this.time - (this.restartExecAt ?? -9) > 0.6 && this.time - (this.lastOffside ?? -99) > 20) {
         let m = this.offsideMargin(p, recv);
         // El delantero a veces arranca antes de tiempo: si está cerca de la línea, queda adelantado al salir el pase
         const raw = this.lineGap(p, recv);
@@ -561,13 +573,13 @@ export class Match {
     const d = this.dir(p.team); let best = null, bs = -Infinity, lofted = false;
     for (const t of this.active(p.team)) {
       if (t === p || t.mode === 'fallen') continue;
-      const dist = t.pos.distanceTo(p.pos); if (dist < 5 || dist > 45) continue;
+      const dist = t.pos.distanceTo(p.pos); if (dist < 5 * K || dist > 45 * K) continue;
       const fwd = (t.pos.x - p.pos.x) * d, open = Math.min(9, this.minOppDist(t));
       let lane = Infinity;
       for (const o of this.active(this.opp(p.team))) lane = Math.min(lane, segDist(o.pos, p.pos, t.pos));
       let s = fwd * 0.75 + open * 1.3 - dist * 0.1 + Math.random() * 5 - (t.role === 'GK' ? 12 : 0) + (t.role === 'FWD' ? 2 : 0);
-      if (lane < 1.6) s -= dist > 16 ? 3 : 9;
-      if (s > bs) { bs = s; best = t; lofted = lane < 1.6 && dist > 16 || dist > 32; }
+      if (lane < 1.6) s -= dist > 16 * K ? 3 : 9;
+      if (s > bs) { bs = s; best = t; lofted = !this.small && (lane < 1.6 && dist > 16 || dist > 32); }
     }
     if (!best) { this.dribbleForward(p); return; }
     const lead = new THREE.Vector3().copy(best.pos).addScaledVector(best.vel, 0.6);
@@ -578,7 +590,7 @@ export class Match {
   dribbleForward(p) { p.decisionT = 0.5; }
   cross(p) {
     const gx = this.goalX(p.team), d = this.dir(p.team);
-    const target = new THREE.Vector3(gx - d * rand(6, 13), 0, rand(-6, 6));
+    const target = new THREE.Vector3(gx - d * rand(6, 13) * K, 0, rand(-6, 6) * K);
     const v = this.passVelocity(this.ball.pos, target, true); v.y *= 1.05;
     this.scheduleKick(p, v, 'cross', 0.22);
   }
@@ -626,12 +638,12 @@ export class Match {
     if (hard && !def.sentOff && Math.random() < (this.game.career?.event?.clasico ? 0.55 : 0.32) && this.time - (this.lastScuffle || -999) > 60) this.startScuffle(def, victim);
     // ¿Penal? Falta dentro del área del equipo que defiende.
     const defGoal = -this.goalX(def.team);
-    const inBox = Math.abs(victim.pos.x - defGoal) < 16.5 && Math.abs(victim.pos.z) < 20.16 && Math.sign(victim.pos.x) === Math.sign(defGoal);
+    const inBox = Math.abs(victim.pos.x - defGoal) < 16.5 * K && Math.abs(victim.pos.z) < 20.16 * K && Math.sign(victim.pos.x) === Math.sign(defGoal);
     const b = this.ball; b.owner = null;
     if (inBox) {
       this.addFeed('¡PENAL! El árbitro señala el punto penal.');
       this.excite = 0.9;
-      this.setRestart('penalty', victim.team, new THREE.Vector3(defGoal - Math.sign(defGoal) * 11, 0, 0), 4.5);
+      this.setRestart('penalty', victim.team, new THREE.Vector3(defGoal - Math.sign(defGoal) * Math.max(6, 11 * K), 0, 0), 4.5);
     } else this.setRestart('free', victim.team, victim.pos.clone(), sim ? 6 : 3);
   }
   // ---------- Trifulca: un compañero de la víctima encara al infractor, empujones, se meten a separar y el árbitro saca tarjetas ----------
@@ -732,12 +744,12 @@ export class Match {
     if (duel) { (winner === a ? c : a).playAnim('header', 0.7); this.logEvent('disputa', [a, c], b.pos, { team: winner.team }); this.excite = Math.max(this.excite, 0.5); }
     const gx = this.goalX(winner.team), dist = Math.hypot(gx - winner.pos.x, winner.pos.z);
     b.lastTouch = winner.team; winner.noTouch = 0.4; b.cross = false; b.headerCD = this.time + 1.6;
-    if (dist < 15 && Math.abs(winner.pos.z) < 12) { b.owner = winner; this.shoot(winner, true); winner.pendingKick.t = 0.05; }
+    if (dist < 15 * K && Math.abs(winner.pos.z) < 12 * K) { b.owner = winner; this.shoot(winner, true); winner.pendingKick.t = 0.05; }
     else {
       winner.playAnim('header', 0.7);
       const d = this.dir(winner.team);
-      const tgt = this.nearest(winner.team, new THREE.Vector3(winner.pos.x + d * 15, 0, winner.pos.z), winner, false);
-      const to = tgt ? tgt.pos : new THREE.Vector3(winner.pos.x + d * 20, 0, winner.pos.z);
+      const tgt = this.nearest(winner.team, new THREE.Vector3(winner.pos.x + d * 15 * K, 0, winner.pos.z), winner, false);
+      const to = tgt ? tgt.pos : new THREE.Vector3(winner.pos.x + d * 20 * K, 0, winner.pos.z);
       const v = this.passVelocity(b.pos, to, true); v.x *= 0.85; v.z *= 0.85; v.y *= 0.6;
       b.vel.copy(v); this.game.audio?.kick(b.pos, 10);
     }
@@ -751,7 +763,7 @@ export class Match {
         const d = this.dir(p.team);
         const targets = this.active(p.team).filter((t) => t !== p).sort((a, c) => (c.pos.x - a.pos.x) * d - this.minOppDist(c) * 0.5 + this.minOppDist(a) * 0.5);
         const tgt = Math.random() < 0.6 ? targets[0] : targets[Math.floor(Math.random() * Math.min(4, targets.length))];
-        const lofted = tgt.pos.distanceTo(p.pos) > 22;
+        const lofted = !this.small && tgt.pos.distanceTo(p.pos) > 22;
         p.h.play('loco');
         this.scheduleKick(p, this.passVelocity(b.pos, tgt.pos, lofted), 'pass', 0.25, { target: tgt });
       }
@@ -898,11 +910,11 @@ export class Match {
       if (r.type === 'kickoff') t = this.formationTarget(p, true);
       else if (r.type === 'penalty') {
         if (p.role === 'GK' && p.team !== r.team) t = new THREE.Vector3(-this.goalX(r.team) * -1, 0, 0);
-        else t = new THREE.Vector3(this.goalX(r.team) - d * rand(18, 22), 0, (p.number - 6) * 2.4);
+        else t = new THREE.Vector3(this.goalX(r.team) - d * rand(18, 22) * K, 0, (p.number - 6) * 2.4 * K);
         if (p.role === 'GK' && p.team !== r.team) t.set(this.goalX(r.team) - d * 0.3, 0, 0);
       } else if (r.type === 'corner' && p.role !== 'GK') {
         const inBox = p.team === r.team ? p.role !== 'DEF' || p.slot.fz < -0.3 : true;
-        t = inBox ? new THREE.Vector3(this.goalX(r.team) - d * rand(4, 12), 0, ((p.number * 7) % 13 - 6) * 1.3) : this.formationTarget(p);
+        t = inBox ? new THREE.Vector3(this.goalX(r.team) - d * rand(4, 12) * K, 0, ((p.number * 7) % 13 - 6) * 1.3 * K) : this.formationTarget(p);
         if (!p.cornerSpot) p.cornerSpot = t; t = p.cornerSpot;
       } else t = this.formationTarget(p);
       p.moveToward(t.x, t.z, p.maxSpeed * 0.6, dt, 5);
@@ -922,7 +934,7 @@ export class Match {
       this.scheduleKick(tk, this.passVelocity(b.pos, mate.pos, false), 'pass', 0.2, { target: mate });
     } else if (r.type === 'corner') {
       this.whistle(1);
-      const v = this.passVelocity(b.pos, new THREE.Vector3(this.goalX(r.team) - d * rand(5, 11), 0, rand(-5, 5)), true); v.y *= 1.1;
+      const v = this.passVelocity(b.pos, new THREE.Vector3(this.goalX(r.team) - d * rand(5, 11) * K, 0, rand(-5, 5) * K), true); v.y *= 1.1;
       this.scheduleKick(tk, v, 'corner', 0.25);
     } else if (r.type === 'penalty') {
       this.whistle(1); this.shoot(tk, false); tk.pendingKick.kind = 'penalty'; tk.pendingKick.t = 0.35;
@@ -935,7 +947,7 @@ export class Match {
       this.scheduleKick(tk, this.passVelocity(b.pos, tgt.pos, true), 'pass', 0.3, { target: tgt });
     } else if (r.type === 'free') {
       const dist = Math.hypot(this.goalX(r.team) - b.pos.x, b.pos.z);
-      if (dist < 28 && Math.random() < 0.55) this.shoot(tk, false); else this.pass(tk);
+      if (dist < 28 * K && Math.random() < 0.55) this.shoot(tk, false); else this.pass(tk);
     }
   }
   updateBreak(dt) {
@@ -966,7 +978,7 @@ export class Match {
     const b = this.ball.pos;
     const r = this.ref;
     const sc = this.scuffle && this.scuffle.stage >= 1 ? this.scuffle.center : null;
-    const tx = sc ? sc.x + 1.6 : clamp(b.x - Math.sign(b.x || 1) * 10, -HL + 10, HL - 10), tz = sc ? sc.z - 1.2 : clamp(b.z - 12, -HW + 4, HW - 4);
+    const tx = sc ? sc.x + 1.6 : clamp(b.x - Math.sign(b.x || 1) * 10 * K, -HL + 10 * K, HL - 10 * K), tz = sc ? sc.z - 1.2 : clamp(b.z - 12 * K, -HW + 4 * K, HW - 4 * K);
     const dx = tx - r.pos.x, dz = tz - r.pos.z, d = Math.hypot(dx, dz);
     const sp = this.phase === 'warmup' ? 0 : Math.min(sc ? 7 : 6, d * (sc ? 1.5 : 0.8));
     if (d > 0.3) { r.vel.set(dx / d * sp, 0, dz / d * sp); } else r.vel.set(0, 0, 0);
@@ -974,6 +986,7 @@ export class Match {
     if (this.phase === 'warmup') { r.pos.set(0, 0, -HW - 2); }
     r.h.root.position.copy(r.pos); r.h.root.rotation.y = r.yaw; r.h.update(dt, r.vel.length());
     for (const a of this.ars) {
+      if (this.small) { a.h.root.visible = false; continue; }
       const ax = clamp(b.x, a.side > 0 ? 0 : -HL, a.side > 0 ? HL : 0);
       const dd = ax - a.pos.x; a.vel.set(Math.sign(dd) * Math.min(5, Math.abs(dd)), 0, 0);
       a.pos.addScaledVector(a.vel, dt);
@@ -986,7 +999,7 @@ export class Match {
     for (const n of this.bench) {
       if (n.kind === 'coach') {
         const att = this.ball.owner && this.ball.owner.team === n.team;
-        const st = this.phase === 'goal' && this.goalTeam === n.team ? 'cheer' : att && Math.abs(this.ball.pos.x) > 25 ? 'point' : 'talk';
+        const st = this.phase === 'goal' && this.goalTeam === n.team ? 'cheer' : att && Math.abs(this.ball.pos.x) > 25 * K ? 'point' : 'talk';
         if (n.h.state !== st) n.h.play(st, 1, n.team ? -1 : 1);
         const tx = clamp(n.home.x + this.ball.pos.x * 0.06, n.home.x - 4, n.home.x + 4);
         n.pos.x += (tx - n.pos.x) * dt * 0.8; n.h.root.position.copy(n.pos);

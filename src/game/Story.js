@@ -37,7 +37,7 @@ export class Story {
     g.ui.toast(halftime ? `Medio tiempo: los fotógrafos cambian a la ${z.name}.` : `Sorteo hecho: los fotógrafos se ubican en la ${z.name}, detrás de la portería que ataca el local.`, 'mission', 5000);
     g.ui.setObjective(`Ubicate en la ${z.name} (designada${halftime ? ' para el segundo tiempo' : ' por el sorteo'}).`);
     // Los demás fotógrafos y Kendall caminan a la zona asignada
-    const L = 52.5, sx = side;
+    const L = (st.P?.L || 105) / 2, sx = side;
     const photogs = this.npcs.filter((n) => n.name === 'Fotógrafo' || n === this.alvaro);
     photogs.forEach((n, i) => {
       const tz = -24 + (i % 12) * 4.2 + (i === photogs.length - 1 ? 1 : 0), tx = sx * (L + 4.4 + (i % 2) * 0.6);

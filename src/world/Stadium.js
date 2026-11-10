@@ -29,6 +29,8 @@ export class Stadium {
     this.col = game.collision;
     this.doors = []; this.lightPositions = []; this.zones = { restricted: [], press: [] };
     this.spots = {}; this.flags = []; this.smoke = [];
+    // Cancha: 105×68 en estadios; fut 5 / fut 7 usan una cancha chica en el centro del recinto
+    this.mini = !!cfg.pitch; this.P = cfg.pitch ? { L: cfg.pitch.L, W: cfg.pitch.W, apron: cfg.pitch.apron ?? 3, goalW: cfg.pitch.goalW, goalH: cfg.pitch.goalH } : PITCH;
     this.D = { near: cfg.nearRows * cfg.rowDepth, end: Math.max(cfg.endRows, cfg.eastRows ?? 0) * cfg.rowDepth, far: cfg.farRows * cfg.rowDepth };
     this.frontY = 1.25;
     this.gateZ = APRON_Z + this.D.near + 0.6;
@@ -70,11 +72,11 @@ export class Stadium {
   }
   buildGround() {
     // Superficie exterior y plataforma perimetral (alrededor de la cancha)
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(2 * APRON_X + 2, 2 * APRON_Z + 2), this.m.track);
+    const outer = new THREE.Mesh(new THREE.PlaneGeometry(2 * APRON_X + 2, 2 * APRON_Z + 2), this.cfg.ground ? new THREE.MeshStandardMaterial({ map: TX.concreteTexture(this.cfg.ground, 9, [30, 22]), roughness: 0.95 }) : this.m.track);
     outer.rotation.x = -Math.PI / 2; outer.position.y = -0.01; outer.receiveShadow = true; this.group.add(outer);
   }
   buildPitch() {
-    const { L, W, apron } = PITCH;
+    const { L, W, apron } = this.P;
     const wet = this.game.env.wet;
     const gn = TX.noiseNormalMap('grass', 256, 24, 4, 5, true).clone(); gn.needsUpdate = true; gn.repeat.set((L + 2 * apron) / 1.6, (W + 2 * apron) / 1.6);
     this.pitchMat = new THREE.MeshStandardMaterial({ map: TX.pitchTexture(L, W, apron, wet, !!this.cfg.turf), normalMap: gn, normalScale: new THREE.Vector2(0.55, 0.55), roughness: wet ? 0.42 : 0.93, metalness: 0 });
@@ -89,6 +91,7 @@ export class Stadium {
     }
   }
   buildBoards() {
+    if (this.mini) return this.buildMiniFence();
     const { L } = PITCH;
     const boardH = 0.9, mkBoard = (len, x, z, ry, ad) => {
       const tex = TX.adTexture(...ad);
@@ -120,7 +123,7 @@ export class Stadium {
     for (const s of [-1, 1]) for (let z = -28; z < 28; z += 8) mkBoard(7.9, s * 59.6, z + 4, s > 0 ? -Math.PI / 2 : Math.PI / 2, ADS[k++ % ADS.length]);
   }
   buildGoals() {
-    const { L } = PITCH;
+    const { L } = this.P;
     const postM = stdMat('#ffffff', 0.35, 0.1);
     const netCanvas = TX.makeCanvas(128, 128), ctx = netCanvas.getContext('2d');
     ctx.strokeStyle = 'rgba(240,240,240,0.9)'; ctx.lineWidth = 3;
@@ -130,7 +133,7 @@ export class Stadium {
     this.goals = [];
     for (const s of [-1, 1]) {
       const g = new THREE.Group(); g.position.set(s * L / 2, 0, 0); this.group.add(g);
-      const r = 0.06, H = 2.44, Wg = 7.32, depth = 2.0;
+      const r = 0.06, H = this.P.goalH || 2.44, Wg = this.P.goalW || 7.32, depth = this.mini ? 1.2 : 2.0;
       const cyl = (len) => new THREE.CylinderGeometry(r, r, len, 10);
       for (const z of [-Wg / 2, Wg / 2]) { const p = new THREE.Mesh(cyl(H), postM); p.position.set(0, H / 2, z); p.castShadow = true; g.add(p); this.col.addCentered(s * L / 2, z, 0.15, 0.15, H); }
       const bar = new THREE.Mesh(cyl(Wg), postM); bar.rotation.x = Math.PI / 2; bar.position.set(0, H, 0); bar.castShadow = true; g.add(bar);
@@ -142,11 +145,12 @@ export class Stadium {
         const shp = new THREE.Shape(); shp.moveTo(0, 0); shp.lineTo(s * depth, 0); shp.lineTo(s * depth, H * 0.75); shp.lineTo(0, H); shp.lineTo(0, 0);
         const side = new THREE.Mesh(new THREE.ShapeGeometry(shp), netM); side.position.set(0, 0, z); g.add(side);
       }
-      this.col.addCentered(s * (L / 2 + depth / 2), 0, depth, Wg, 2.0, 0, 'goal');
+      this.col.addCentered(s * (L / 2 + depth / 2), 0, depth, Wg, H, 0, 'goal');
       this.goals.push(g);
     }
   }
   buildBenches() {
+    if (this.mini) return this.buildMiniBenches();
     const shell = new THREE.MeshStandardMaterial({ color: 0xdfe6ea, roughness: 0.1, transparent: true, opacity: 0.45 });
     const seatM = stdMat(this.cfg.seatColors[0], 0.6);
     this.benchSeats = [];
@@ -455,10 +459,11 @@ export class Stadium {
     for (const sx of [-1, 1]) spots.push([sx * 54, APRON_Z - 1.1]);
     for (const p of cfg.extraPoles || []) spots.push(p);
     const lampG = new THREE.SphereGeometry(0.42, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2); lampG.rotateX(Math.PI / 2);
+    if (cfg.poles) spots.splice(0, spots.length, ...cfg.poles);
     for (const [x, z] of spots) {
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.5, H, 10), poleM); pole.position.set(x, H / 2, z); pole.castShadow = true; this.group.add(pole);
       this.col.addCentered(x, z, 0.9, 0.9, H);
-      const head = new THREE.Group(); head.position.set(x, H + 1.2, z); head.lookAt(x * 0.3, 0, z * 0.2); this.group.add(head);
+      const head = new THREE.Group(); head.position.set(x, H + 1.2, z); head.lookAt(this.mini ? 0 : x * 0.3, 0, this.mini ? 0 : z * 0.2); this.group.add(head);
       // Racimo: dos crucetas con focos redondos alrededor (como en las canchas de barrio)
       for (const [w, y] of [[4.6, 1.1], [5.4, -0.1], [3.6, -1.2]]) { const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.18, 0.18), frameM); bar.position.y = y; head.add(bar); }
       const vbar = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3, 0.2), frameM); head.add(vbar);
@@ -468,7 +473,7 @@ export class Stadium {
       this.lightPositions.push(new THREE.Vector3(x, H + 1.2, z));
     }
     // Focos bajo el borde del techo principal (si lo hay)
-    if (this.roofY?.near) {
+    if (this.roofY?.near && !this.mini) {
       const ey = this.roofY.near - 0.08 * ((this.D.near + 4) / 2) - 0.6;
       for (const x of [-30, 0, 30]) {
         const l = new THREE.Mesh(new THREE.BoxGeometry(5, 0.35, 1), lampM); l.position.set(x, ey, APRON_Z - 2.4); this.group.add(l);
@@ -510,6 +515,46 @@ export class Stadium {
         this.trainees.push({ h, grp, r: 7 + (i % 3) * 2.2, a: (i / n) * Math.PI * 2, cx: idx % 2 ? 12 : -12, sp: 2.6 + Math.random() * 0.6 });
       }
     });
+  }
+  // ---------- Canchas de fut 5 / fut 7 ----------
+  // Malla alta detrás de los arcos, malla lateral con entrada al centro del lado cercano y (opcional) techo de zinc sobre la cancha
+  buildMiniFence() {
+    const { L, W, apron: m } = this.P, ex = L / 2 + m, ez = W / 2 + m;
+    const hi = this.cfg.fenceHigh || 6, lo = this.cfg.fenceH || 4;
+    const fence = (len, rot, x, z, h) => { const old = this.cfg.fenceH; this.cfg.fenceH = h; const f = this.fenceSide(len, rot, new THREE.Vector3(x, 0, z)); this.cfg.fenceH = old; return f; };
+    for (const sx of [-1, 1]) { fence(2 * ez, sx > 0 ? -Math.PI / 2 : Math.PI / 2, sx * ex, 0, hi); this.col.add(sx > 0 ? ex : -ex - 0.4, 0, -ez, sx > 0 ? ex + 0.4 : -ex, hi, ez); }
+    fence(2 * ex, Math.PI, 0, -ez, lo); this.col.add(-ex, 0, -ez - 0.4, ex, lo, -ez);
+    // Lado cercano: dos tramos con la entrada (2,6 m) en el centro para entrar a la orilla de la cancha
+    const g = 1.3, segL = ex - g;
+    for (const sx of [-1, 1]) { fence(segL, 0, sx * (g + segL / 2), ez, lo); this.col.add(sx > 0 ? g : -ex, 0, ez, sx > 0 ? ex : -g, lo, ez + 0.4); }
+    // Techo sobre la cancha (fut 5 techado)
+    if (this.cfg.pitchRoof) {
+      const H = this.cfg.pitchRoof, colM = stdMat('#d9dde2', 0.5, 0.6), roofM = new THREE.MeshStandardMaterial({ color: 0x8d969e, roughness: 0.7, metalness: 0.25, side: THREE.DoubleSide });
+      for (const sx of [-1, 0, 1]) for (const sz of [-1, 1]) { const c = this.box(0.35, H, 0.35, colM, sx * (ex + 0.6), H / 2, sz * (ez + 0.6)); this.col.addCentered(sx * (ex + 0.6), sz * (ez + 0.6), 0.4, 0.4, H); }
+      for (const sz of [-1, 1]) { const r = new THREE.Mesh(new THREE.BoxGeometry(2 * ex + 2.4, 0.12, ez + 1.6), roofM); r.position.set(0, H + 1.1, sz * (ez + 1.6) / 2); r.rotation.x = sz * 0.14; r.castShadow = true; this.group.add(r); }
+      for (const sx of [-1, -0.5, 0, 0.5, 1]) { const t = this.box(0.18, 0.5, 2 * ez + 2.4, colM, sx * (ex + 0.6), H + 0.4, 0, { cast: false }); }
+      this.roofY = { near: H + 1.2 };
+    }
+  }
+  buildMiniBenches() {
+    const { W, apron: m } = this.P, seatM = stdMat('#b0b5ba', 0.4, 0.7);
+    this.benchSeats = [];
+    for (const s of [-1, 1]) {
+      const cx = s * 7, cz = W / 2 + m - 0.7, len = 5;
+      this.box(len, 0.07, 0.42, seatM, cx, 0.46, cz); for (const e of [-1, 1]) this.box(0.06, 0.46, 0.4, this.m.darkSteel, cx + e * (len / 2 - 0.2), 0.23, cz, { cast: false });
+      this.col.addCentered(cx, cz, len, 0.45, 0.5, 0, 'nostand');
+      for (let i = 0; i < 6; i++) this.benchSeats.push(new THREE.Vector3(cx - len / 2 + 0.45 + i * 0.82, 0, cz));
+    }
+    this.spots.gateInside = new THREE.Vector3(0, 0, this.gateZ - 2);
+  }
+  defineMiniZones() {
+    const { L, W, apron: m } = this.P;
+    this.zones.restricted.push({ id: 'pitch', name: 'la cancha', x0: -L / 2 - 0.3, x1: L / 2 + 0.3, z0: -W / 2 - 0.3, z1: W / 2 + 0.3, when: 'always' });
+    for (const s of [-1, 1]) this.zones.press.push({ id: 'press' + s, name: s > 0 ? 'Orilla Este (detrás del arco)' : 'Orilla Oeste (detrás del arco)', x0: s > 0 ? L / 2 + 0.3 : -L / 2 - m, x1: s > 0 ? L / 2 + m : -L / 2 - 0.3, z0: -W / 2 - m, z1: W / 2 + m });
+    this.zones.press.push({ id: 'nearSide', name: 'Orilla de la cancha', x0: -L / 2, x1: L / 2, z0: W / 2 + 0.3, z1: W / 2 + m });
+    this.spots.photographers = [];
+    this.spots.alvaro = new THREE.Vector3(L / 2 + Math.min(1.8, m - 0.6), 0, W / 2 - 1.5);
+    this.spots.stewards = [];
   }
   buildScoreboard() {
     const c = TX.makeCanvas(1024, 384); this.sbCanvas = c; this.sbCtx = c.getContext('2d');
@@ -842,6 +887,7 @@ export class Stadium {
     this.spots.gateInside = new THREE.Vector3(0, 0, gz - 2);
   }
   defineZones() {
+    if (this.mini) return this.defineMiniZones();
     const { L, W } = PITCH;
     // Zonas prohibidas: la cancha siempre, el área técnica durante el juego, la boca del área.
     this.zones.restricted.push({ id: 'pitch', name: 'la cancha', x0: -L / 2 - 0.6, x1: L / 2 + 0.6, z0: -W / 2 - 0.6, z1: W / 2 + 0.6, when: 'always' });

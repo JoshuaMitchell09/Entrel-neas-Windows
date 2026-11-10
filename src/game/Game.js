@@ -139,7 +139,7 @@ export class Game {
     this.scenery = new Scenery(this, new THREE.Vector3(0, 0, 0), 175);
     if (!this.post.composer && this.settings.q.bloom) this.post.setup(); else this.post.configure();
     onProgress(0.8, 'Calentando a los equipos…');
-    this.match = new Match(this, this.stadium, home, away, { halfSeconds: +this.settings.data.halfSeconds || 240, youth: !!(ev.youth || home.youth) });
+    this.match = new Match(this, this.stadium, home, away, { halfSeconds: +this.settings.data.halfSeconds || 240, youth: !!(ev.youth || home.youth), pitch: this.stadium.cfg.pitch });
     this.collision.rebuild();
     this.scene.add(this.player.root);
     this.player.avatar.setLensLength(this.inventory.lens.max);

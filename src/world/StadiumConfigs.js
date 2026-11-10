@@ -112,3 +112,31 @@ STADIUMS.car = {
   hasBarra: false, tifo: 'Semillero rojinegro',
   description: 'El semillero rojinegro: cancha principal, gradería techada y canchas de entrenamiento alrededor.',
 };
+// ---------- Fútbol con los amigos: complejos de fut 7 y fut 5 ----------
+// Cancha sintética chica en el centro, cercada con malla, con más canchas alrededor y una soda/gradería pequeña.
+STADIUMS.fut7 = {
+  id: 'fut7', name: 'Complejo Fut 7 El Roble', city: 'Hatillo', capacity: 300, tier: 0, league: 'amigos',
+  pitch: { L: 60, W: 38, apron: 3, goalW: 6, goalH: 2, players: 7 },
+  nearRows: 22, endRows: 0, farRows: 0, rowDepth: 0.8, rowHeight: 0.2,
+  roof: 'main', corners: false, lights: 'poles', poleH: 13, crowdDensity: 0.22, openSides: true, fenceH: 4, fenceHigh: 6,
+  poles: [[-36, -25], [36, -25], [-36, 25], [36, 25]], turf: true, smallBoard: true, ground: '#5a5e63',
+  seatColors: ['#3a3f46', '#2c3036'], seatPattern: 'solid', aisleColor: '#f2c500', aisleEvery: 12,
+  roofSpec: { near: { color: '#d8dde2', fascia: 'COMPLEJO FUT 7 EL ROBLE · SODA Y BAÑOS', fasciaColor: '#0f5132' } },
+  facade: '#eef0ea', facadeBand: '#0f5132', facadeText: 'COMPLEJO FUT 7 EL ROBLE', facadeH: 8.5,
+  extraFields: [{ x: -50, z: 0, rot: Math.PI / 2, l: 36, w: 20, goalW: 3, goalH: 2, turf: true, players: 6 }, { x: 50, z: 0, rot: Math.PI / 2, l: 36, w: 20, goalW: 3, goalH: 2, turf: true, players: 4 }],
+  hasBarra: false, tifo: 'Mejengas',
+  description: 'Canchas sintéticas de fut 7 en el barrio: la mejenga de los jueves con los compas.',
+};
+STADIUMS.fut5 = {
+  id: 'fut5', name: 'Fut 5 La Bodega', city: 'Desamparados', capacity: 150, tier: 0, league: 'amigos',
+  pitch: { L: 40, W: 22, apron: 2.4, goalW: 3, goalH: 2, players: 5 },
+  nearRows: 22, endRows: 0, farRows: 0, rowDepth: 0.8, rowHeight: 0.2,
+  roof: 'main', corners: false, lights: 'poles', poleH: 12, crowdDensity: 0.16, openSides: true, fenceH: 4, fenceHigh: 6, pitchRoof: 8,
+  poles: [[-26, -16], [26, -16], [-26, 16], [26, 16]], turf: true, smallBoard: true, ground: '#55585c',
+  seatColors: ['#3a3f46', '#2c3036'], seatPattern: 'solid', aisleColor: '#f2c500', aisleEvery: 12,
+  roofSpec: { near: { color: '#d8dde2', fascia: 'FUT 5 LA BODEGA · ALQUILER DE CANCHAS', fasciaColor: '#7a1f1f' } },
+  facade: '#efe9e0', facadeBand: '#7a1f1f', facadeText: 'FUT 5 LA BODEGA', facadeH: 8.5,
+  extraFields: [{ x: -48, z: 0, rot: Math.PI / 2, l: 36, w: 20, goalW: 3, goalH: 2, turf: true, players: 6 }, { x: 48, z: 0, rot: Math.PI / 2, l: 36, w: 20, goalW: 3, goalH: 2, turf: true, players: 5 }, { x: -22, z: -31, l: 36, w: 20, goalW: 3, goalH: 2, turf: true, players: 4 }, { x: 22, z: -31, l: 36, w: 20, goalW: 3, goalH: 2, turf: true, players: 6 }],
+  hasBarra: false, tifo: 'Fut 5',
+  description: 'Fut 5 techado: cinco contra cinco, mucha velocidad y los compas en la gradería.',
+};
