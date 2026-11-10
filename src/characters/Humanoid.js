@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { damp, clamp, smooth } from '../core/MathUtil.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { buildLens } from '../gfx/CameraGear.js';
 
 // Geometrías compartidas (una sola vez para todos los personajes => menos memoria).
 const G = {};
@@ -181,10 +182,12 @@ export class Humanoid {
     this.pose = this.blankPose(); this.lambda = 14; this.breath = Math.random() * 6;
     this.idleVariant = Math.random();
   }
-  setLensLength(mm) {
-    // Longitud visual del lente según distancia focal (aprox.).
-    const L = clamp(0.07 + mm / 1400, 0.08, 0.5); const r = clamp(0.035 + mm / 9000, 0.04, 0.085);
-    this.lensMesh.scale.set(r / 0.04, r / 0.04, L);
+  // Lente detallado (anillos, collar, parasol, cristal; blanco con anillo rojo si es teleobjetivo profesional)
+  setLensLength(mm, def = null) {
+    const L = def || { max: mm, min: mm >= 300 ? mm : Math.round(mm * 0.35), fMin: mm >= 200 ? 2.8 : 4, short: `${mm}`, name: '' };
+    const key = def ? def.id : 'mm' + mm; if (this.lensKey === key) return; this.lensKey = key;
+    if (this.lensMesh) { this.cameraRig.remove(this.lensMesh); }
+    this.lensMesh = buildLens(L); this.lensMesh.position.set(0, -0.005, 0.04); this.cameraRig.add(this.lensMesh);
   }
   showCamera(v) { this.cameraRig.visible = v; }
   setSecondCamera(look, mm) {

@@ -26,14 +26,20 @@ export class PlayerController {
     this.avatar = new Humanoid(humanoidOpts(this.look));
     this.root = this.avatar.root; this.root.position.copy(old.position); this.root.rotation.copy(old.rotation); this.root.visible = vis;
     if (parent) { parent.remove(old); parent.add(this.root); }
-    this.avatar.showCamera(this.cameraEquipped); this.avatar.setLensLength(this.game.inventory.lens.max);
+    this.avatar.showCamera(this.cameraEquipped); this.avatar.setLensLength(this.game.inventory.lens.max, this.game.inventory.lens);
     if (this.avatar.backpack) this.avatar.backpack.visible = bpVis;
+    this.attachScreen();
     this.avatar.setCameraBody(this.game.inventory.camera?.look);
     this.syncSecondCamera();
     this.game.viewModel?.setSkin(this.look.skin, this.look.shirt);
   }
   place(x, z, yaw = 0) { this.pos.set(x, 0, z); this.yaw = yaw; this.vel.set(0, 0, 0); this.root.position.copy(this.pos); this.root.rotation.y = yaw; }
   get forward() { return new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
+  // Pantalla trasera de la cámara del personaje con la vista en vivo
+  attachScreen() {
+    const lv = this.game.liveView; if (!lv || this.avatar.lcd) return;
+    const scr = lv.makeScreen(0.085, 0.058); scr.position.set(0.008, 0.002, -0.0488); scr.rotation.y = Math.PI; this.avatar.cameraRig.add(scr); this.avatar.lcd = scr;
+  }
   syncSecondCamera() {
     const inv = this.game.inventory, show = inv.hasSecond && (!this.game.inEvent || inv.prepared !== false);
     this.avatar.setSecondCamera?.(show ? inv.camera2.look : null, inv.lens2?.max || 70);
@@ -42,6 +48,7 @@ export class PlayerController {
     this.cameraEquipped = v; this.avatar.showCamera(v);
   }
   update(dt, input, camYaw, allowMove) {
+    { const L = this.game.inventory.lens; if (L && this.avatar.lensKey !== L.id) this.avatar.setLensLength(L.max, L); if (!this.avatar.lcd) this.attachScreen(); }
     const g = this.game, col = g.collision;
     let mv = allowMove && !this.frozen ? input.moveVector() : { x: 0, y: 0 };
     const sprint = input.isDown('sprint') && !this.cameraEquipped;

@@ -79,7 +79,7 @@ export class Stadium {
     const { L, W, apron } = this.P;
     const wet = this.game.env.wet;
     const gn = TX.noiseNormalMap('grass', 256, 24, 4, 5, true).clone(); gn.needsUpdate = true; gn.repeat.set((L + 2 * apron) / 1.6, (W + 2 * apron) / 1.6);
-    this.pitchMat = new THREE.MeshStandardMaterial({ map: TX.pitchTexture(L, W, apron, wet, !!this.cfg.turf), normalMap: gn, normalScale: new THREE.Vector2(0.55, 0.55), roughness: wet ? 0.42 : 0.93, metalness: 0 });
+    this.pitchMat = new THREE.MeshStandardMaterial({ map: TX.pitchTexture(L, W, apron, wet, !!this.cfg.turf, !!this.cfg.track), normalMap: gn, normalScale: new THREE.Vector2(0.55, 0.55), roughness: wet ? 0.42 : 0.93, metalness: 0 });
     const p = new THREE.Mesh(new THREE.PlaneGeometry(L + 2 * apron, W + 2 * apron), this.pitchMat);
     p.rotation.x = -Math.PI / 2; p.receiveShadow = true; this.group.add(p); this.pitch = p;
     // Banderines de esquina
@@ -265,7 +265,7 @@ export class Stadium {
     const d = new THREE.Object3D(), c = new THREE.Color();
     seatPos.forEach(([x, y, z, row], i) => {
       d.position.set(x, y, z); d.updateMatrix(); seatMesh.setMatrixAt(i, d.matrix);
-      const pat = this.cfg.seatPattern === 'blocks' ? Math.floor((x + len / 2) / (this.cfg.aisleEvery || 9)) % 2 === 0 : this.cfg.seatPattern === 'solid' ? true : (row % 6 < 3) !== (Math.floor((x + 200) / 12) % 2 === 0);
+      const pat = this.cfg.seatPattern === 'tiers' ? row < (tier ? tier.row : rows / 2) : this.cfg.seatPattern === 'blocks' ? Math.floor((x + len / 2) / (this.cfg.aisleEvery || 9)) % 2 === 0 : this.cfg.seatPattern === 'solid' ? true : (row % 6 < 3) !== (Math.floor((x + 200) / 12) % 2 === 0);
       c.set(this.cfg.seatColors[pat ? 0 : 1]); seatMesh.setColorAt(i, c);
     });
     seatMesh.receiveShadow = true; grp.add(seatMesh);
@@ -335,6 +335,7 @@ export class Stadium {
   }
   buildRoofAndLights() {
     const cfg = this.cfg; const st = this.stands;
+    if (cfg.roof === 'arcs') return this.buildArcRoofs();
     const roofM = new THREE.MeshStandardMaterial({ color: 0xd8dde2, roughness: 0.6, metalness: 0.4, side: THREE.DoubleSide });
     const trussM = stdMat('#eef1f4', 0.45, 0.6);
     const addRoof = (len, D, topY, rotY, origin, truss = false, o = {}) => {
@@ -447,6 +448,49 @@ export class Stadium {
         const l = new THREE.Mesh(new THREE.BoxGeometry(6, 0.4, 1.2), lampM); l.position.set(x, yy, z); this.group.add(l);
         const sp = new THREE.Sprite(glow); sp.scale.set(14, 14, 1); sp.position.set(x, yy - 0.5, z); this.group.add(sp);
         this.lightPositions.push(new THREE.Vector3(x, yy, z));
+      }
+    }
+  }
+  // Techos en forma de ala sobre las tribunas laterales (Estadio Nacional): bajan hasta el suelo en las esquinas,
+  // con paneles plegados en diente de sierra, cerchas de acero a la vista y focos bajo el borde frontal.
+  buildArcRoofs() {
+    const cfg = this.cfg, st = this.stands;
+    const lampM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4e0, emissiveIntensity: 0.1 }); this.game.env.register(lampM, 'emissiveIntensity', 0.1, 3, 'flood');
+    const glow = new THREE.SpriteMaterial({ map: TX.glowSprite('#fff2d8'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false }); this.game.env.register(glow, 'opacity', 0, 0.9, 'flood');
+    const roofM = new THREE.MeshStandardMaterial({ color: 0xf4f6f8, roughness: 0.45, metalness: 0.15, flatShading: true, side: THREE.DoubleSide });
+    const steel = stdMat('#e3e7eb', 0.4, 0.7), steel2 = stdMat('#b9c1c9', 0.45, 0.7);
+    const half = APRON_X + this.D.end + 16, nu = 160, nv = 16, N = 16;
+    this.roofY = {};
+    for (const s of [1, -1]) {
+      const side = s > 0 ? 'near' : 'far', D = this.D[side], top = st[side].topY, Hc = top + 13;
+      const zF = (u) => s * (APRON_Z - 4.5 + 4 * u * u), zB = (u) => s * (APRON_Z + D + 2.5 - 2 * u * u);
+      const h = (u) => Hc * Math.pow(Math.max(0, 1 - u * u), 0.5);
+      const Y = (u, v) => { const w = Math.abs(((u + 1) * N / 2) % 1 - 0.5) * 2; return Math.max(0.2, h(u) * (1 - 0.4 * v * v) + (0.5 - w) * 9 * Math.pow(v, 1.15) * Math.min(1, h(u) / 10)); };
+      const pos = [], idx = [];
+      for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) { const u = -1 + 2 * i / nu, v = j / nv; pos.push(u * half, Y(u, v), zF(u) + (zB(u) - zF(u)) * v); }
+      for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) { const a = i * (nv + 1) + j, b = a + nv + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+      let g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g = g.toNonIndexed(); g.computeVertexNormals();
+      const roof = new THREE.Mesh(g, roofM); roof.castShadow = true; roof.receiveShadow = true; this.group.add(roof);
+      this.roofY[side] = Hc;
+      // Cerchas: borde frontal (bajo el techo) y borde trasero (arco sobre la fachada)
+      const chord = (fz, dy, r, mat, u0 = -0.97, u1 = 0.97) => {
+        const pts = []; for (let k = 0; k <= 60; k++) { const u = u0 + (u1 - u0) * k / 60; pts.push(new THREE.Vector3(u * half, Math.max(0.2, Y(u, fz === 'f' ? 0 : 1) - dy), fz === 'f' ? zF(u) : zB(u))); }
+        const t = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, r, 8, false), mat); t.castShadow = true; this.group.add(t); return pts;
+      };
+      for (const [fz, deep] of [['f', 3.2], ['b', 2.6]]) {
+        const a = chord(fz, 0.35, 0.32, steel), b = chord(fz, deep, 0.24, steel2);
+        for (let k = 1; k < a.length - 1; k++) {
+          const p0 = a[k], p1 = b[k + (k % 2 ? 1 : -1)]; if (!p1 || p0.y < 1.2) continue;
+          const d = new THREE.Vector3().subVectors(p1, p0), L = d.length();
+          const m = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, L, 6), steel2); m.position.copy(p0).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); this.group.add(m);
+        }
+      }
+      // Focos bajo el borde frontal del techo
+      for (let u = -0.56; u <= 0.57; u += 0.08) {
+        const x = u * half, y = Y(u, 0) - 3.8, z = zF(u) + s * 1.2;
+        const l = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.35, 1), lampM); l.position.set(x, y, z); this.group.add(l);
+        const sp = new THREE.Sprite(glow); sp.scale.set(12, 12, 1); sp.position.set(x, y - 0.5, z); this.group.add(sp);
+        this.lightPositions.push(new THREE.Vector3(x, y, z));
       }
     }
   }
@@ -823,6 +867,17 @@ export class Stadium {
       for (const [a, b] of segs) { const a2 = a + (a > -facLen / 2 ? 0.2 : 0), b2 = b - (b < facLen / 2 ? 0.2 : 0); this.box(b2 - a2, 3.2, 0.62, bandM, (a2 + b2) / 2, 1.6, gz + 0.02, { cast: false }); }
       for (const [a, b, hy] of gaps) this.box(b - a + 0.4, 3.2 - hy + 0.05, 0.62, bandM, (a + b) / 2, (hy + 3.2) / 2, gz + 0.02, { cast: false });
     }
+    if (cfg.facadeGlass) {
+      // Muro cortina de vidrio con montantes de aluminio (sin tapar los accesos)
+      const gm = new THREE.MeshStandardMaterial({ color: 0x9fc0cf, roughness: 0.06, metalness: 0.6, envMapIntensity: 1.4, emissive: 0x0d1c26 });
+      const mul = stdMat('#d9dde2', 0.35, 0.8), y0 = 3.6, y1 = Math.min(facH - 1.2, 15);
+      for (const [a, b] of segs) {
+        const a2 = Math.max(a, -facLen / 2 + 2) + 0.4, b2 = Math.min(b, facLen / 2 - 2) - 0.4; if (b2 - a2 < 2) continue;
+        this.box(b2 - a2, y1 - y0, 0.1, gm, (a2 + b2) / 2, (y0 + y1) / 2, gz + 0.36, { cast: false });
+        for (let x = a2; x <= b2 + 0.01; x += 3) this.box(0.12, y1 - y0, 0.16, mul, x, (y0 + y1) / 2, gz + 0.42, { cast: false });
+        for (const yy of [y0, (y0 + y1) / 2, y1]) this.box(b2 - a2, 0.12, 0.16, mul, (a2 + b2) / 2, yy, gz + 0.42, { cast: false });
+      }
+    }
     if (cfg.brickCorners) {
       const bm = new THREE.MeshStandardMaterial({ map: TX.brickTexture([6, 2]), roughness: 0.85 });
       for (const sx of [-1, 1]) {
@@ -845,13 +900,15 @@ export class Stadium {
     }
     const name = (cfg.facadeText && facH < 12) ? null : new THREE.Mesh(new THREE.PlaneGeometry(30, 2.4), new THREE.MeshStandardMaterial({ map: TX.signTexture(cfg.name.toUpperCase(), '#00000000', '#1a1a1a', 2048, 160, 'bold 110px Georgia'), transparent: true }));
     if (name) { name.position.set(0, cfg.facadeLetters ? 2.4 : facH - 2, cfg.facadeLetters ? gz + 0.36 : gz + 0.32); if (cfg.facadeLetters) { name.scale.set(0.5, 0.5, 1); name.position.x = 20; } this.group.add(name); }
-    const pr = new THREE.Mesh(new THREE.PlaneGeometry(4, 0.7), new THREE.MeshBasicMaterial({ map: TX.signTexture('ACCESO DE PRENSA', '#0b3d91', '#ffffff', 512, 90, 'bold 52px Arial') }));
+    const pr = new THREE.Mesh(new THREE.PlaneGeometry(4, 0.7), new THREE.MeshBasicMaterial({ map: TX.signTexture(this.mini ? 'ENTRADA' : 'ACCESO DE PRENSA', '#0b3d91', '#ffffff', 512, 90, 'bold 52px Arial') }));
     pr.position.set(0, 3.5, gz + 0.32); this.group.add(pr);
     // Puerta corrediza del control de seguridad
     // Puerta automática de vidrio (transparente y corrediza) sobre la cara interior de la fachada
     this.gate = new GlassSlidingDoor({ scene: this.group, collision: this.col, x: 0, z: gz - 0.7, width: 4, height: 3, label: 'ACCESO',
-      signTexture: TX.signTexture('ACCESO DE PRENSA · SOLO ACREDITADOS', '#00000000', '#0b3d91', 1024, 160, 'bold 64px Arial') });
+      signTexture: TX.signTexture(this.mini ? 'BIENVENIDOS · ALQUILER DE CANCHAS' : 'ACCESO DE PRENSA · SOLO ACREDITADOS', '#00000000', '#0b3d91', 1024, 160, 'bold 64px Arial') });
     this.doors.push(this.gate);
+    // En los complejos de fut 5 / fut 7 no hay control de seguridad: la puerta queda abierta para todos
+    if (this.mini) { this.gate.open(); this.spots.guard = new THREE.Vector3(1.4, 0, gz + 3.4); this.spots.gateOutside = new THREE.Vector3(0, 0, gz + 9); this.spots.gateInside = new THREE.Vector3(0, 0, gz - 2); return; }
     // Arco detector de metales y escáner de equipaje
     const det = new THREE.Group(); det.position.set(0, 0, gz + 2.4); this.group.add(det);
     for (const s of [-1, 1]) { const p = this.box(0.25, 2.3, 0.5, this.m.darkSteel, s * 0.55, 1.15, 0, { parent: det }); this.col.addCentered(s * 0.55, gz + 2.4, 0.25, 0.5, 2.3); }

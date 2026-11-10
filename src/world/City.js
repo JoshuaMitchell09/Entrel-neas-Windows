@@ -122,7 +122,8 @@ export class City {
   }
   buildPlaza() {
     const gz = this.gz, P = this.P;
-    const pav = new THREE.MeshStandardMaterial({ map: TX.brickTexture([30, 8]), roughness: 0.85, color: 0xd8d0c8 });
+    const pc = this.game.stadium?.cfg?.plaza;
+    const pav = pc ? new THREE.MeshStandardMaterial({ map: TX.tileTexture(pc[0], pc[1], [62, 17]), roughness: 0.7 }) : new THREE.MeshStandardMaterial({ map: TX.brickTexture([30, 8]), roughness: 0.85, color: 0xd8d0c8 });
     this.plane(124, P - gz, pav, 0, 0.005, (gz + P) / 2);
     // Muros laterales de la plaza (separan de los lotes vecinos)
     const wallM = new THREE.MeshStandardMaterial({ map: TX.paintedWallTexture('#d9d2c3', 77), roughness: 0.9 });

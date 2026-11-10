@@ -144,12 +144,12 @@ STADIUMS.fut5 = {
 // Estadio Nacional en La Sabana: moderno, techado alrededor, graderías de dos niveles y anillo de luces.
 STADIUMS.nacional = {
   id: 'nacional', name: 'Estadio Nacional', city: 'La Sabana', capacity: 35000, tier: 3, league: 'seleccion',
-  nearRows: 32, endRows: 26, farRows: 32, rowDepth: 0.76, rowHeight: 0.5,
-  roof: 'full', corners: true, lights: 'roof', crowdDensity: 0.97,
-  seatColors: ['#1b3fa6', '#c8102e'], seatPattern: 'blocks', aisleColor: '#e9e9e9', aisleEvery: 10,
-  tiers: { near: { row: 16, rise: 2.6 }, far: { row: 16, rise: 2.6 } },
+  nearRows: 32, endRows: 20, farRows: 32, rowDepth: 0.76, rowHeight: 0.5,
+  roof: 'arcs', corners: false, lights: 'roof', crowdDensity: 0.97, track: true, ground: '#a9432f',
+  seatColors: ['#c8102e', '#1b3fa6'], seatPattern: 'tiers', aisleColor: '#e9e9e9', aisleEvery: 11,
+  tiers: { near: { row: 15, rise: 2.6 }, far: { row: 15, rise: 2.6 }, east: { row: 10, rise: 2 }, west: { row: 10, rise: 2 } },
   banners: { near: ['LA SELE · PURA VIDA', 'ESTADIO NACIONAL', 'VAMOS COSTA RICA'], far: ['ASCENSO TOTAL · FOTO Y VIDEO', 'UN SOLO PAÍS', 'LA SABANA'] },
-  facade: '#e9ecef', facadeBand: '#c8102e', facadeText: 'ESTADIO NACIONAL · LA SABANA',
+  facade: '#eef1f4', facadeBand: '#c8102e', facadeText: 'ESTADIO NACIONAL · COSTA RICA', facadeGlass: true, facadeH: 13, plaza: ['#e7b9c3', '#d9a3b0'],
   hasBarra: true, tifo: 'Pura vida, Sele',
-  description: 'El Estadio Nacional en La Sabana: techo perimetral, dos niveles y treinta y cinco mil voces.',
+  description: 'El Estadio Nacional en La Sabana: techos en forma de ala, pista de atletismo y treinta y cinco mil voces.',
 };

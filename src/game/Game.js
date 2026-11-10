@@ -40,6 +40,7 @@ import { PhoneCam } from '../cinema/PhoneCam.js';
 import { clamp } from '../core/MathUtil.js';
 import { buildMenuCamera } from '../world/MenuCameraProp.js';
 import { showChapter } from '../ui/Chapter.js';
+import { LiveView } from '../gfx/CameraGear.js';
 import { MAIL_CONTACTS } from '../career/Tiers.js';
 
 export class Game {
@@ -61,7 +62,7 @@ export class Game {
     this.missions = new MissionSystem(this); this.saves = new SaveSystem(this); this.story = new Story(this); this.rules = new Rules(this);
     this.interaction = new InteractionSystem(this); this.photoMode = new PhotoMode(this);
     this.player = new PlayerController(this); this.follow = new FollowCamera(this, this.camera);
-    this.post = new PostFX(this); this.scene.add(this.camera); this.viewModel = new ViewModel(this);
+    this.post = new PostFX(this); this.scene.add(this.camera); this.viewModel = new ViewModel(this); this.liveView = new LiveView(this);
     this.phone = new Phone(this); this.crowdLife = new CrowdLife(this); this.drone = new DroneCam(this); this.travel = new Travel(this); this.recorder = new Recorder(this); this.phoneCam = new PhoneCam(this);
     this.state = 'boot'; this.clock = 15 * 60; this.time = 0; this.fps = 60; this.inEvent = false; this.cinematic = false;
     this.playerName = 'Fotógrafo'; this.profileId = null; this.menuT = 0;
@@ -399,7 +400,7 @@ export class Game {
     requestAnimationFrame(loop);
   }
   update(dt) {
-    this.time += dt;
+    this.time += dt; this.lastDt = dt;
     if ((this.state === 'hub' || this.state === 'play') && !this.arcade && this.career.mail?.sent.length) { this.mailT = (this.mailT || 0) - dt; if (this.mailT <= 0) { this.mailT = 2; this.mailCheck(); } }
     this.input.pollPad();
     if (this.input.pad && !this.padAnnounced) { this.padAnnounced = true; this.audio.start(); this.ui.toast(this.input.isPlayStation ? '🎮 Control de PlayStation conectado' : '🎮 Control conectado', 'good'); }
@@ -487,7 +488,7 @@ export class Game {
     sm.needsUpdate = (this.frameN = (this.frameN || 0) + 1) % ((this.dynScale ?? 1) < 0.9 && this.settings.data.dynRes ? 2 : 1) === 0;
     if (this.state === 'boot' || this.state === 'loading') { this.renderer.render(this.scene, this.camera); return; }
     if (this.photoMode.active && !this.ui.screen) this.photoMode.pipeline.renderLive(this.scene, this.camera, this.photoMode.opticsState());
-    else this.post.draw(this.camera);
+    else { this.liveView?.update(this.lastDt || 1 / 60); this.post.draw(this.camera); }
     if (this.state !== 'play') this.ui.update(0);
   }
 }

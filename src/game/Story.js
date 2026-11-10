@@ -61,24 +61,24 @@ export class Story {
     // ---------- Personajes principales ----------
     const home0 = g.team(ev.home);
     if (this.amateur) {
-      // Mejenga: Andrés te recibe en la entrada del complejo (no hay acreditación)
-      this.mariana = add(st.group, { name: 'Andrés', role: 'story', look: { ...randomFan(home0), shirt: home0.colors.primary }, pos: st.spots.gateOutside.clone().add(new THREE.Vector3(2.2, 0, -2.5)), yaw: Math.PI, idle: 'talk' });
-      this.mariana.mapLabel = 'Andrés (te espera)';
+      // Mejenga: Diego, tu amigo, te espera en la entrada del complejo (no hay acreditación ni seguridad)
+      this.mariana = add(st.group, { name: 'Diego', role: 'story', look: { ...randomFan(home0), shirt: home0.colors.primary, pants: home0.colors.shorts }, pos: st.spots.gateOutside.clone().add(new THREE.Vector3(2.2, 0, -2.5)), yaw: Math.PI, idle: 'talk' });
+      this.mariana.mapLabel = 'Diego (te espera)';
     } else {
       this.mariana = add(city.group, { name: this.tierIdx === 5 ? 'Lucía Brenes' : 'Mariana Quesada', role: 'story', look: LOOKS.mariana, pos: city.spots.mariana, yaw: 0, idle: 'clipboard' });
       this.mariana.mapLabel = this.tierIdx === 5 ? 'Lucía (acreditaciones)' : 'Mariana (acreditaciones)';
     }
-    this.guard = add(st.group, { name: 'Oficial Brenes', role: 'story', look: LOOKS.guard, pos: st.spots.guard, yaw: 0, idle: 'loco' });
-    this.guard.mapLabel = 'Seguridad';
-    if (city.spots.boothGuard) add(city.group, { name: 'Guarda del parqueo', look: LOOKS.guard, pos: city.spots.boothGuard, yaw: Math.PI, idle: 'loco', chatty: 0.3 }).mapLabel = 'Parqueo de prensa';
-    this.alvaro = this.amateur
-      ? add(st.group, { name: 'Diego', role: 'story', look: { ...randomFan(home0), shirt: home0.colors.primary, pants: home0.colors.shorts }, pos: st.spots.alvaro, yaw: -Math.PI / 2, idle: 'talk' })
-      : add(st.group, { name: 'Kendall Rojas', role: 'story', look: LOOKS.alvaro, pos: st.spots.alvaro, yaw: -Math.PI / 2, idle: 'sit', camera: 400 });
-    this.alvaro.mapLabel = this.amateur ? 'Diego' : 'Kendall Rojas';
-    g.storyNPCs = [this.mariana, this.guard, this.alvaro];
+    this.guard = st.mini ? null : add(st.group, { name: 'Oficial Brenes', role: 'story', look: LOOKS.guard, pos: st.spots.guard, yaw: 0, idle: 'loco' });
+    if (this.guard) this.guard.mapLabel = 'Seguridad';
+    if (city.spots.boothGuard && !st.mini) add(city.group, { name: 'Guarda del parqueo', look: LOOKS.guard, pos: city.spots.boothGuard, yaw: Math.PI, idle: 'loco', chatty: 0.3 }).mapLabel = 'Parqueo de prensa';
+    this.alvaro = this.amateur ? this.mariana : add(st.group, { name: 'Kendall Rojas', role: 'story', look: LOOKS.alvaro, pos: st.spots.alvaro, yaw: -Math.PI / 2, idle: 'sit', camera: 400 });
+    if (!this.amateur) this.alvaro.mapLabel = 'Kendall Rojas';
+    g.storyNPCs = [this.mariana, this.guard, this.alvaro].filter((n, i, a) => n && a.indexOf(n) === i);
     // Policías en la plaza, periodistas en fila, vendedores
-    add(city.group, { name: 'Policía', look: LOOKS.police, pos: new THREE.Vector3(4, 0, st.gateZ + 8), yaw: Math.PI, idle: 'loco' });
-    add(city.group, { name: 'Policía', look: LOOKS.police, pos: new THREE.Vector3(-5, 0, st.gateZ + 10), yaw: Math.PI * 0.8, idle: 'talk', chatty: 0.5 });
+    if (!st.mini) {
+      add(city.group, { name: 'Policía', look: LOOKS.police, pos: new THREE.Vector3(4, 0, st.gateZ + 8), yaw: Math.PI, idle: 'loco' });
+      add(city.group, { name: 'Policía', look: LOOKS.police, pos: new THREE.Vector3(-5, 0, st.gateZ + 10), yaw: Math.PI * 0.8, idle: 'talk', chatty: 0.5 });
+    }
     if (!this.amateur) add(city.group, { name: 'Periodista', look: LOOKS.journalist, pos: city.spots.mariana.clone().add(new THREE.Vector3(1.5, 0, 3.4)), yaw: Math.PI, idle: 'talk', chatty: 0.6 });
     for (const v of city.vendorSpots) add(city.group, { name: 'Vendedor', look: LOOKS.vendor, pos: v.pos, yaw: Math.PI, idle: 'wave', chatty: 1 });
     // Aficionados caminando y en grupos
@@ -121,11 +121,11 @@ export class Story {
     I.clear();
     for (const [fs, v] of stallNPCs) I.add({ position: fs.counter, radius: 1.8, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Comprar en ${fs.name}`, onInteract: () => { v.playOnce('talk', 3); g.audio?.talk?.(v.pos.clone().setY(1.6), 1.2, 1.2); openShopCounter(g, fs); } });
     for (const [sh, k] of shopNPCs) I.add({ position: sh.counter, radius: 2.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Comprar en ${sh.name}`, onInteract: () => { k.playOnce('talk', 3); g.audio?.talk?.(k.pos.clone().setY(1.6), 1.2, sh.kind === 'bar' ? 0.9 : 1.4); openShopCounter(g, sh); } });
-    I.add({ position: this.mariana.pos.clone().setY(1.2).add(new THREE.Vector3(0, 0, this.amateur ? 0 : 2)), radius: 3.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con ${this.mariana.name.split(' ')[0]}`, onInteract: () => (this.amateur ? this.talkFriendGate() : this.talkMariana()) });
-    I.add({ position: st.spots.guard.clone().setY(1.2), radius: 3.5, prompt: () => this.stage === 'street' || this.stage === 'credential' ? `<kbd>${g.ui.key('interact')}</kbd>Presentarse en seguridad` : null, onInteract: () => this.security() });
-    I.add({ getPosition: () => this.alvaro.pos.clone().setY(1), position: this.alvaro.pos, radius: 3, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>${this.amateur && this.stage === 'post' ? 'Pasarle las fotos a Diego' : 'Hablar con ' + this.alvaro.name}`, onInteract: () => (this.amateur ? this.talkDiego() : this.talkAlvaro()) });
-    g.inventory.prepared = false; g.player.syncSecondCamera?.();
-    I.add({ position: st.spots.prepBench.clone().setY(1), radius: 2.6, prompt: () => (!g.inventory.prepared && ['inside', 'field'].includes(this.stage) ? `<kbd>${g.ui.key('interact')}</kbd>Preparar equipo` : null), onInteract: () => this.prepare() });
+    I.add({ getPosition: () => this.mariana.pos.clone().setY(1.2).add(new THREE.Vector3(0, 0, this.amateur ? 0 : 2)), position: this.mariana.pos, radius: 3.2, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>${this.amateur && this.stage === 'post' ? 'Pasarle las fotos a Diego' : 'Hablar con ' + this.mariana.name.split(' ')[0]}`, onInteract: () => (this.amateur ? this.talkFriendGate() : this.talkMariana()) });
+    if (!st.mini) I.add({ position: st.spots.guard.clone().setY(1.2), radius: 3.5, prompt: () => this.stage === 'street' || this.stage === 'credential' ? `<kbd>${g.ui.key('interact')}</kbd>Presentarse en seguridad` : null, onInteract: () => this.security() });
+    if (!this.amateur) I.add({ getPosition: () => this.alvaro.pos.clone().setY(1), position: this.alvaro.pos, radius: 3, prompt: () => `<kbd>${g.ui.key('interact')}</kbd>Hablar con ${this.alvaro.name}`, onInteract: () => this.talkAlvaro() });
+    g.inventory.prepared = !!this.amateur; g.player.syncSecondCamera?.();
+    if (!this.amateur) I.add({ position: st.spots.prepBench.clone().setY(1), radius: 2.6, prompt: () => (!g.inventory.prepared && ['inside', 'field'].includes(this.stage) ? `<kbd>${g.ui.key('interact')}</kbd>Preparar equipo` : null), onInteract: () => this.prepare() });
     I.add({ position: st.pressDoor.center, radius: 2.4, prompt: () => (st.pressDoor.isOpen ? null : `<kbd>${g.ui.key('interact')}</kbd>Abrir: Sala de prensa`), onInteract: () => {
       if (!g.inventory.credential) { g.ui.toast('Acceso restringido: se requiere acreditación de prensa.', 'warn'); g.audio?.ui('error'); return; }
       st.pressDoor.open(); g.audio?.ui('door'); g.ui.toast('Tu acreditación abre la sala de prensa.', 'good');
@@ -175,13 +175,10 @@ export class Story {
     if (this.amateur) {
       const A = {
         home: `Salí de tu casa y andá al ${STADIUMS[this.ev.stadium].name}: tu carro, el bus o un taxi/Uber con el teléfono (${g.ui.key('phone')}).`,
-        street: 'Andrés te espera en la entrada del complejo.',
-        credential: 'Entrá al complejo por la puerta principal.',
-        inside: g.inventory.prepared ? `Andá a la orilla de la cancha: Diego te espera. Saque: ${ko}.` : 'Prepará tu cámara en la banca del pasillo (a la derecha).',
-        field: 'Hablá con Diego a la orilla de la cancha.',
+        street: 'Diego te espera en la entrada del complejo.',
         briefed: this.kickedOff ? 'Tomale fotos a la mejenga: goles, jugadas y celebraciones.' : `Fotografiá el calentamiento. La mejenga empieza a las ${ko} (T: esperar).`,
         match: 'Tomale fotos a la mejenga.',
-        post: '¡Se acabó! Pasale tus mejores fotos a Diego (a la orilla de la cancha).',
+        post: '¡Se acabó! Pasale tus mejores fotos a Diego (te espera a la orilla de la cancha).',
         done: 'Fotos entregadas al grupo.',
       };
       g.ui.setObjective(A[s] || ''); return;
@@ -202,7 +199,7 @@ export class Story {
   objectivePos() {
     const g = this.game, st = g.stadium;
     if (this.designated && ['briefed', 'match'].includes(this.stage)) return this.objectivePosDesignated();
-    if (this.amateur) return { home: this.mariana?.pos, street: this.mariana?.pos, credential: st.spots.gateInside, inside: g.inventory.prepared ? this.alvaro?.pos : st.spots.prepStand, field: this.alvaro?.pos, post: this.alvaro?.pos }[this.stage] || null;
+    if (this.amateur) return { home: this.mariana?.pos, street: this.mariana?.pos, post: this.mariana?.pos }[this.stage] || null;
     return { home: this.mariana?.pos, street: this.mariana?.pos, credential: st.spots.guard, inside: g.inventory.prepared ? this.alvaro?.pos : st.spots.prepStand, field: this.alvaro?.pos, post: st.spots.laptop }[this.stage] || null;
   }
   async talkMariana() {
@@ -349,44 +346,28 @@ export class Story {
   }
   // ---------- Mejengas con los amigos ----------
   async talkFriendGate() {
-    const g = this.game, st = g.stadium, ev = this.ev;
-    const A = { who: 'Andrés', role: 'Amigo · Los Compas F.C.', color: '#f4a261', initials: 'AN', pitch: 1.1, pos: this.mariana.pos.clone().setY(1.6) };
-    this.mariana.playOnce('talk', 5);
-    if (this.stage !== 'street' && this.stage !== 'home') { await g.ui.dialogue([{ ...A, text: pick(['¡Dele, mae! Diego está a la orilla de la cancha.', 'Tomame una buena, que mi mamá sigue tu Lente 😂', '¡Vamos, Compas!']) }]); return; }
-    const first = this.intro;
-    await g.ui.dialogue(first ? [
-      { ...A, text: `¡${g.playerName}! ¡Llegó el fotógrafo/la fotógrafa! Diego no para de hablar de las fotos que nos vas a tomar 😂` },
-      { ...A, text: 'Aquí no hay acreditación ni nada, mae: pasá, el del portón ya sabe que venís con nosotros. Si querés alistar la cámara, en el pasillo hay una banca.' },
-      { ...A, text: `Jugamos contra ${g.teamName(ev.away)} a las ${formatClock(ev.kickoff)}. Diego está a la orilla de la cancha. ¡Sacanos guapos!`, options: [{ label: '¡De una, mae!', value: 1 }] },
-    ] : [
-      { ...A, text: `¡Mae, llegaste! Hoy es contra ${g.teamName(ev.away)}. ${pick(['Ya la gente del barrio anda preguntando por tus fotos.', 'Las fotos de la vez pasada las puso mi mamá de fondo de pantalla 😂', 'Diego dice que hoy mete gol seguro.'])}`, options: [{ label: '¡Vamos!', value: 1 }] },
-    ]);
-    g.inventory.credential = { amateur: true, eventId: ev.id, event: ev.title, home: ev.home, away: ev.away, stadium: STADIUMS[ev.stadium].name, number: '—' };
-    st.gate.open(); g.audio?.ui('door');
-    this.stage = 'credential'; this.setObjective(); g.saves.save('auto');
-  }
-  async talkDiego() {
     const g = this.game, ev = this.ev;
-    const D = { who: 'Diego', role: 'Amigo · capitán de Los Compas', color: '#2a9d8f', initials: 'DG', pitch: 1, pos: this.alvaro.pos.clone().setY(1.2) };
-    this.alvaro.playOnce('talk', 5);
+    const D = { who: 'Diego', role: 'Tu amigo · capitán de Los Compas', color: '#2a9d8f', initials: 'DG', pitch: 1, pos: this.mariana.pos.clone().setY(1.6) };
+    this.mariana.playOnce('talk', 5);
     if (this.stage === 'post') {
       await g.ui.dialogue([{ ...D, text: `¡Qué partidazo, ${g.playerName}! Pasame las mejores al grupo, máximo diez. Si salen buenas las subimos a Lente y las ve todo el barrio.` }]);
       g.openDelivery(); return;
     }
-    if (this.stage === 'inside' || this.stage === 'field' || this.stage === 'credential') {
+    if (this.stage === 'home' || this.stage === 'street') {
       const first = this.intro && !this.introDone;
-      const lines = first ? [
-        { ...D, text: `¡Mae, viniste! Gracias por hacer esto gratis, de verdad. Con estas fotos el equipo se va a ver de Primera 😂` },
-        { ...D, text: `Yo no sé nada de fotos, pero vi un video: dicen que se saca la cámara con ${g.ui.key('equip')}, con clic derecho se ve por el visor y con la rueda se hace zoom.` },
-        { ...D, text: `Y que para que no salgamos movidos hay que poner la velocidad rápida, como 1/1000. En el visor ${g.ui.key('paramPrev')} y ${g.ui.key('paramNext')} eligen qué cambiar y ${g.ui.key('paramDec')}/${g.ui.key('paramInc')} lo cambian. Con ${g.ui.key('driveMode')} tirás en ráfaga.` },
-        { ...D, text: 'Aquí la cancha es chiquitica y todo pasa rapidísimo. Ponete detrás de un marco o a la orilla y esperá la jugada. Tomame unas del calentamiento para ir practicando.', options: [{ label: '¡Listo, Diego!', value: 1 }] },
+      await g.ui.dialogue(first ? [
+        { ...D, text: `¡Mae, viniste! Gracias por hacer esto gratis, de verdad. Pasá, aquí nadie revisa nada: es el fut del barrio 😂` },
+        { ...D, text: `Yo no sé nada de fotos, pero vi un video: se saca la cámara con ${g.ui.key('equip')}, con clic derecho se ve por el visor y con la rueda se hace zoom.` },
+        { ...D, text: `Para que no salgamos movidos hay que poner la velocidad rápida, como 1/1000. En el visor ${g.ui.key('paramPrev')} y ${g.ui.key('paramNext')} eligen qué cambiar y ${g.ui.key('paramDec')}/${g.ui.key('paramInc')} lo cambian. Con ${g.ui.key('driveMode')} tirás en ráfaga.` },
+        { ...D, text: `La cancha es chiquitica y todo pasa rapidísimo: ponete detrás de un marco o a la orilla y esperá la jugada. Jugamos contra ${g.teamName(ev.away)} a las ${formatClock(ev.kickoff)}. ¡Sacanos guapos!`, options: [{ label: '¡De una, mae!', value: 1 }] },
       ] : [
-        { ...D, text: `${pick(['¡Pura vida, mae!', '¡Llegó el profesional!', '¡Mae, hoy sí!'])} Hoy es contra ${g.teamName(ev.away)}. Lo que queremos: «${ev.assignment.title}». ${pick(['Si meto gol, me tomás la celebración, ¿ok?', 'Ponete detrás del marco, que ahí se ven las caras.', 'Las de la vez pasada quedaron brutales.'])}`, options: [{ label: '¡De una!', value: 1 }] },
-      ];
-      await g.ui.dialogue(lines);
+        { ...D, text: `${pick(['¡Pura vida, mae!', '¡Llegó el profesional!', '¡Mae, hoy sí!'])} Hoy es contra ${g.teamName(ev.away)}. Lo que queremos: «${ev.assignment.title}». ${pick(['Si meto gol, me tomás la celebración, ¿ok?', 'Ponete detrás del marco, que ahí se ven las caras.', 'Las de la vez pasada quedaron brutales.'])} ¡Pasá!`, options: [{ label: '¡Vamos!', value: 1 }] },
+      ]);
+      g.inventory.credential = { amateur: true, eventId: ev.id, event: ev.title, home: ev.home, away: ev.away, stadium: STADIUMS[ev.stadium].name, number: '—' };
+      g.inventory.prepared = true; if (!g.player.cameraEquipped) g.player.setCameraEquipped(true); g.player.syncSecondCamera?.();
       this.stage = 'briefed'; this.briefed = true; this.setObjective(); g.events.emit('story:alvaro');
       if (first) { g.missions.add('m_calentamiento'); setTimeout(() => g.ui.hint('Modo fotografía', `<kbd>${g.ui.key('equip')}</kbd>equipar cámara<br><kbd>Clic der.</kbd>visor · <kbd>Clic</kbd>disparar · <kbd>Rueda</kbd>zoom<br><kbd>${g.ui.key('paramPrev')}</kbd>/<kbd>${g.ui.key('paramNext')}</kbd> parámetro · <kbd>${g.ui.key('paramDec')}</kbd>/<kbd>${g.ui.key('paramInc')}</kbd> valor<br><kbd>${g.ui.key('autofocus')}</kbd>autofoco · <kbd>${g.ui.key('driveMode')}</kbd>ráfaga · <kbd>${g.ui.key('crouch')}</kbd>agacharse<br><kbd>${g.ui.key('gallery')}</kbd>galería · <kbd>T</kbd>esperar el saque`, 20000), 400); }
-      return;
+      g.saves.save('auto'); return;
     }
     const opts = [{ label: 'Dale', value: 0 }]; if (!this.kickedOff) opts.unshift({ label: 'Estoy listo, que empiece', value: 'ready' });
     const v = await g.ui.dialogue([{ ...D, text: pick(['¡Concentrado/a, mae! Que no se te pase el gol.', 'Ponete detrás del marco cuando ataquemos.', 'Después me pasás las fotos, ¿ok?']), options: opts }]);
@@ -447,7 +428,6 @@ export class Story {
     for (const t of this.timers.slice()) { t.t += dt; t.fn(Math.min(1, t.t / t.dur)); if (t.t >= t.dur) { this.timers.splice(this.timers.indexOf(t), 1); t.res(); } }
     // Disparadores por ubicación
     if (this.stage === 'home' && p.x > -172) { this.stage = 'street'; this.setObjective(); g.ui.toast(this.amateur ? '📍 Llegaste al complejo. Andrés te espera en la entrada.' : '📍 Llegaste a la zona del estadio. Buscá el toldo azul de acreditaciones.', 'info', 4000); }
-    if (this.amateur && this.stage === 'credential' && p.z < st.gateZ - 1) { this.stage = 'inside'; this.setObjective(); g.missions.add('m_preparar'); }
     if (!this.amateur && this.stage === 'credential' && p.z < st.gateZ + 14 && Math.abs(p.x) < 12 && !this.gateHinted) { this.gateHinted = true; g.ui.toast('Presentá tu acreditación al guardia de seguridad.', 'info'); g.events.emit('story:gate'); g.missions.add('m_seguridad'); }
     const inBowl = Math.abs(p.x) < 64 && Math.abs(p.z) < 43.6;
     if (inBowl && !this.inBowlOnce) { this.inBowlOnce = true; if (this.stage === 'inside') { this.stage = 'field'; this.setObjective(); } g.ui.toast(`${g.female ? 'Bienvenida' : 'Bienvenido'} al ${STADIUMS[this.ev.stadium].name}.`, 'info'); }
@@ -477,6 +457,7 @@ export class Story {
       g.events.on('match:interviewDone', () => setTimeout(fin, 4000)); setTimeout(fin, 70000);
       return;
     }
+    if (this.amateur) { const sp = g.stadium.spots.alvaro; this.mariana.route = null; this.mariana.pos.set(sp.x, 0, sp.z); this.mariana.root.position.copy(this.mariana.pos); }
     this.stage = 'post'; this.setObjective(); if (!this.amateur) g.missions.add('m_entrevista'); g.missions.add('m_entrega');
     g.ui.toast(this.amateur ? '¡Se acabó la mejenga! Pasale tus mejores fotos a Diego, a la orilla de la cancha.' : `¡Final del partido! 🎙️ ${who} da la entrevista en la zona mixta, junto al túnel. Después entregá tus fotos en la sala de prensa.`, 'mission', 7000);
     g.saves.save('auto');

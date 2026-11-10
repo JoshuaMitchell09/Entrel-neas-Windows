@@ -39,8 +39,8 @@ function cached(key, fn) { if (!cache.has(key)) cache.set(key, fn()); return cac
 
 // Césped del estadio con franjas de corte y líneas reglamentarias pintadas.
 // Cubre un área de (L + 2*m) x (W + 2*m) metros.
-export function pitchTexture(L = 105, W = 68, m = 8, wet = false, turf = false) {
-  return cached(`pitch${L}${W}${m}${wet}${turf}`, () => {
+export function pitchTexture(L = 105, W = 68, m = 8, wet = false, turf = false, track = false) {
+  return cached(`pitch${L}${W}${m}${wet}${turf}${track}`, () => {
     const ppm = 18; // píxeles por metro
     const TW = Math.round((L + 2 * m) * ppm), TH = Math.round((W + 2 * m) * ppm);
     const c = makeCanvas(TW, TH), ctx = c.getContext('2d');
@@ -66,6 +66,16 @@ export function pitchTexture(L = 105, W = 68, m = 8, wet = false, turf = false) 
     };
     const X = (x) => (x + L / 2 + m) * ppm, Y = (z) => (z + W / 2 + m) * ppm;
     if (!turf) { wear(X(-L / 2 + 3), Y(0), 5 * ppm, 0.35); wear(X(L / 2 - 3), Y(0), 5 * ppm, 0.35); wear(X(0), Y(0), 6 * ppm, 0.15); }
+    // Pista de atletismo (Estadio Nacional): tartán rojo con carriles, una franja de grama junto a la cancha
+    if (track) {
+      const g0 = 2.2;
+      ctx.fillStyle = '#b5452f'; ctx.beginPath(); ctx.rect(0, 0, TW, TH); ctx.roundRect((m - g0) * ppm, (m - g0) * ppm, TW - 2 * (m - g0) * ppm, TH - 2 * (m - g0) * ppm, 6 * ppm); ctx.fill('evenodd');
+      const tr = ctx.getImageData(0, 0, TW, TH), td = tr.data, r2 = seededRandom(3);
+      for (let i = 0; i < td.length; i += 4) if (td[i] > 150 && td[i + 1] < 90) { const n = (r2() - 0.5) * 22; td[i] += n; td[i + 1] += n * 0.5; td[i + 2] += n * 0.4; }
+      ctx.putImageData(tr, 0, 0);
+      ctx.strokeStyle = 'rgba(250,250,250,0.85)'; ctx.lineWidth = 0.05 * ppm;
+      for (let k = 0; k <= 5; k++) { const ins = (m - g0) - k * ((m - g0 - 0.4) / 5); ctx.beginPath(); ctx.roundRect(ins * ppm, ins * ppm, TW - 2 * ins * ppm, TH - 2 * ins * ppm, (6 + k * 1.1) * ppm); ctx.stroke(); }
+    }
     // Líneas
     ctx.strokeStyle = 'rgba(245,245,240,0.95)'; ctx.lineWidth = 0.12 * ppm;
     ctx.strokeRect(X(-L / 2), Y(-W / 2), L * ppm, W * ppm);

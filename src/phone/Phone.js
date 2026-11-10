@@ -254,7 +254,8 @@ export class Phone {
       const box = h('div', { class: 'ph-mail' }); body.append(box); renderMail(box, g, () => this.render());
     } else if (V === 'msgs') {
       title('Mensajes');
-      const order = CONTACTS.slice().sort((a, b) => (this.unread[b.id] || 0) - (this.unread[a.id] || 0) || (this.chats[b.id]?.length ? 1 : 0) - (this.chats[a.id]?.length ? 1 : 0));
+      const fl = g.career?.flags || {}, known = (c) => this.chats[c.id]?.length || !(c.id === 'kendall' && !fl.metKendall) && !(c.id === 'mariana' && !fl.metMariana) && !(c.id === 'editor' && (g.career?.tier ?? 3) < 3);
+      const order = CONTACTS.filter(known).sort((a, b) => (this.unread[b.id] || 0) - (this.unread[a.id] || 0) || (this.chats[b.id]?.length ? 1 : 0) - (this.chats[a.id]?.length ? 1 : 0));
       for (const c of order) {
         const last = this.chats[c.id]?.slice(-1)[0];
         body.append(h('button', { class: 'ph-row', onclick: () => { this.unread[c.id] = 0; this.go('chat', c.id); } }, h('span', { class: 'av', style: { background: c.color } }, c.emoji),
