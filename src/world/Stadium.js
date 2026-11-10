@@ -705,9 +705,10 @@ export class Stadium {
     const sgT = TX.signTexture('🍔 ENTRADA GENERAL · COMIDAS', '#c8102e', '#ffffff', 768, 110, 'bold 50px Arial');
     const sgOut = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 0.66), new THREE.MeshBasicMaterial({ map: sgT })); sgOut.position.set(dx, 3.3, this.gateZ + 0.34); this.group.add(sgOut);
     const sgIn = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.46), new THREE.MeshBasicMaterial({ map: TX.signTexture('🍔 ZONA DE COMIDAS', '#c8102e', '#ffffff', 512, 90, 'bold 46px Arial') })); sgIn.position.set(dx, 3.15, z1 - 0.18); sgIn.rotation.y = Math.PI; this.group.add(sgIn);
-    // Torniquetes de la entrada general (marco de acero) y boletería afuera
-    for (const sx of [-1, 1]) this.box(0.12, 2.6, 0.5, this.m.steel, dx + sx * (dw / 2 - 0.1), 1.3, z1 - 0.2, { cast: false });
-    this.box(dw - 0.2, 0.12, 0.5, this.m.steel, dx, 2.62, z1 - 0.2, { cast: false });
+    // Puerta corrediza de vidrio de la entrada general (se abre sola al acercarse) y boletería afuera
+    this.foodDoor = new GlassSlidingDoor({ scene: this.group, collision: this.col, x: dx, z: z1 - 0.45, width: dw - 0.3, height: 2.7, label: 'ENTRADA GENERAL',
+      signTexture: TX.signTexture('ENTRADA GENERAL · COMIDAS', '#00000000', '#c8102e', 1024, 160, 'bold 64px Arial') });
+    this.doors.push(this.foodDoor); this.foodDoor.open();
     const bx0 = dx + dw / 2 + 1.6, gz = this.gateZ;
     this.box(2.2, 2.6, 1.4, stdMat('#e9e2d0', 0.7), bx0, 1.3, gz + 1.1); this.col.addCentered(bx0, gz + 1.1, 2.2, 1.4, 2.6);
     this.box(2.5, 0.12, 1.8, stdMat(this.home.colors.primary, 0.6), bx0, 2.66, gz + 1.15, { cast: false });
@@ -769,8 +770,9 @@ export class Stadium {
     for (const s of [-1, 1]) { this.box(0.6, facH, gz + 10, this.m.facade, s * facLen / 2, facH / 2, gz / 2 - 5); this.col.addCentered(s * facLen / 2, gz / 2 - 5, 0.6, gz + 10, facH); }
     if (cfg.facadeText) {
       const w = Math.min(90, facLen * 0.6);
-      const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, 4.2), new THREE.MeshStandardMaterial({ map: TX.signTexture(cfg.facadeText, cfg.facade, '#ffffff', 2048, 96, '900 66px Arial Black, Arial'), roughness: 0.7, emissive: 0xffffff, emissiveIntensity: 0.12 }));
-      sg.material.emissiveMap = sg.material.map; sg.position.set(-6, facH - 3.2, gz + 0.34); this.group.add(sg);
+      const sgH = Math.min(4.2, facH - 3.9);
+      const sg = new THREE.Mesh(new THREE.PlaneGeometry(w, sgH), new THREE.MeshStandardMaterial({ map: TX.signTexture(cfg.facadeText, cfg.facade, '#ffffff', 2048, 96, '900 66px Arial Black, Arial'), roughness: 0.7, emissive: 0xffffff, emissiveIntensity: 0.12 }));
+      sg.material.emissiveMap = sg.material.map; sg.position.set(-6, Math.max(facH - 3.2, 3.6 + sgH / 2), gz + 0.34); this.group.add(sg);
       // Franja inferior de la fachada, con hueco en el acceso de prensa (x −2.2..2.2)
       const bandM = stdMat(cfg.facadeBand || '#c8102e', 0.7);
       for (const [a, b] of segs) { const a2 = a + (a > -facLen / 2 ? 0.2 : 0), b2 = b - (b < facLen / 2 ? 0.2 : 0); this.box(b2 - a2, 3.2, 0.62, bandM, (a2 + b2) / 2, 1.6, gz + 0.02, { cast: false }); }
@@ -796,8 +798,8 @@ export class Stadium {
       }
       this.box(total + 2, 0.5, 0.6, this.m.steel, 0, 4.4, gz + 0.45);
     }
-    const name = new THREE.Mesh(new THREE.PlaneGeometry(30, 2.4), new THREE.MeshStandardMaterial({ map: TX.signTexture(cfg.name.toUpperCase(), '#00000000', '#1a1a1a', 2048, 160, 'bold 110px Georgia'), transparent: true }));
-    name.position.set(0, cfg.facadeLetters ? 2.4 : facH - 2, cfg.facadeLetters ? gz + 0.36 : gz + 0.32); if (cfg.facadeLetters) { name.scale.set(0.5, 0.5, 1); name.position.x = 20; } this.group.add(name);
+    const name = (cfg.facadeText && facH < 12) ? null : new THREE.Mesh(new THREE.PlaneGeometry(30, 2.4), new THREE.MeshStandardMaterial({ map: TX.signTexture(cfg.name.toUpperCase(), '#00000000', '#1a1a1a', 2048, 160, 'bold 110px Georgia'), transparent: true }));
+    if (name) { name.position.set(0, cfg.facadeLetters ? 2.4 : facH - 2, cfg.facadeLetters ? gz + 0.36 : gz + 0.32); if (cfg.facadeLetters) { name.scale.set(0.5, 0.5, 1); name.position.x = 20; } this.group.add(name); }
     const pr = new THREE.Mesh(new THREE.PlaneGeometry(4, 0.7), new THREE.MeshBasicMaterial({ map: TX.signTexture('ACCESO DE PRENSA', '#0b3d91', '#ffffff', 512, 90, 'bold 52px Arial') }));
     pr.position.set(0, 3.5, gz + 0.32); this.group.add(pr);
     // Puerta corrediza del control de seguridad

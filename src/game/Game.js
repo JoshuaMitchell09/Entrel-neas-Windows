@@ -422,7 +422,7 @@ export class Game {
       m.group.visible = !outside && this.crowdLife.pitchVisible;
     }
     if (st) {
-      st.gate.watch = p.pos;
+      st.gate.watch = p.pos; if (st.foodDoor) st.foodDoor.watch = p.pos;
       st.update(dt, this.time, m?.excite || 0.15);
       const cu = st.crowd.uniforms;
       cu.uExcite.value = m ? m.excite * 0.85 : 0.1;

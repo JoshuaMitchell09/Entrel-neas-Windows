@@ -78,7 +78,7 @@ export class Screens {
     document.addEventListener('keydown', onKey);
     this.ui.openScreen('menu', el);
     this.ui.screenCleanup = () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
-    if (!changelogSeen() && !this.changelogShown) { this.changelogShown = true; setTimeout(() => showChangelog(this.ui), 400); }
+    if (!changelogSeen() && !this.changelogShown) { this.changelogShown = true; setTimeout(() => { if (this.ui.screenName === 'menu') showChangelog(this.ui); else this.changelogShown = false; }, 400); }
   }
   async newGameDialog() {
     const g = this.game;
@@ -366,10 +366,7 @@ export class Screens {
     const g = this.game;
     await cardImage(g.cardPhoto);
     const c = h('canvas'); drawCredential(c, g);
-    const redraw = async () => { await cardImage(g.cardPhoto); drawCredential(c, g); };
-    const photoBtn = g.inventory.credential?.cup ? null : h('details', { class: 'cred-photo' }, h('summary', {}, g.cardPhoto ? '📷 Cambiar la foto del carnet' : '📷 Agregar una foto al carnet'),
-      cardPhotoPicker(this.ui, g.cardPhoto, async (v) => { g.cardPhoto = v; await redraw(); if (!g.arcade) g.saves.save('auto'); }));
-    const el = h('div', { class: 'screen' }, h('div', { class: 'cred-wrap' }, c, h('div', { class: 'muted' }, 'La acreditación se guardó en tu inventario.'), photoBtn,
+    const el = h('div', { class: 'screen' }, h('div', { class: 'cred-wrap' }, c, h('div', { class: 'muted' }, 'La acreditación se guardó en tu inventario.'),
       h('button', { class: 'btn primary', onclick: () => { this.ui.closeScreen(); onClose?.(); } }, 'Guardar acreditación')));
     this.ui.openScreen('credential', el);
   }

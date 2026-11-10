@@ -270,8 +270,8 @@ kbd { display: inline-block; min-width: 24px; padding: 2px 7px; margin-right: 6p
 .dialogue .opts { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
 .dialogue .cont { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: right; }
 /* Credencial */
-.cred-wrap { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.cred-wrap canvas { border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.7); animation: credin .6s cubic-bezier(.2,1.4,.4,1); }
+.cred-wrap { margin: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0; max-height: 100%; }
+.cred-wrap canvas { height: min(620px, calc(100vh - 130px)) !important; width: auto !important; aspect-ratio: 420 / 620; border-radius: 16px; box-shadow: 0 30px 80px rgba(0,0,0,.7); animation: credin .6s cubic-bezier(.2,1.4,.4,1); }
 @keyframes credin { from { transform: translateY(60px) rotate(-6deg) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
 /* Resultados y hub */
 .results { margin: auto; width: min(1100px, 94vw); max-height: 92vh; overflow: auto; padding: 26px; }
